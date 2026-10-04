@@ -292,42 +292,62 @@ def run(folder: str, model_names: list[str], engine: str = "whisper", beam: int 
     keywords = (vocab.prompt_terms() or None) if hotwords else None
     audio_seconds = sum(len(a) for _, a, _ in clips) / TARGET_SR
     results = []
-    for spec in model_names:
-        from .engines import ENGINES
-        # spec = [engine:]model[@lang][+hing]   e.g. small, small@en+hing, parakeet:nemo-parakeet-tdt-0.6b-v3
-        body, plus, flag = spec.partition("+")
-        body, at, lang = body.partition("@")
-        head, _, tail = body.partition(":")
-        eng_name, name = (head, tail) if head in ENGINES else (engine, body)         # (a path like C:\\models has a colon too)
-        prompt = HINGLISH_PROMPT if flag == "hing" else ""
-        lang = lang or None
-        say(f"\n== {spec}")
-        if eng_name == "whisper" and name in models.MODELS and not models.is_downloaded(name):
-            say("   downloading...")
-            models.download(name, on_progress=lambda f, t: None)
-        t0 = time.time()
-        eng = make_engine(eng_name, name, beam, prompt)
-        load_s = time.time() - t0
-        errs = words = 0
-        elapsed = 0.0
-        worst = []
-        for clip, audio, ref in clips:
-            t1 = time.time()
-            text, _ = eng(audio, lang, keywords if getattr(eng, "supports_hotwords", True) else None)
-            elapsed += time.time() - t1
-            if pipeline:
-                text = smart_format(apply_commands(clean(vocab.apply(text))))
-            e, n = wer(ref, text)
-            errs, words = errs + e, words + n
-            if e:
-                worst.append((e, clip, ref, text))
-        eng.unload()
-        worst.sort(reverse=True)
-        results.append({
-            "model": spec, "engine": eng_name, "wer": round(100 * errs / max(words, 1), 2), "errors": errs, "words": words,
-            "seconds_per_clip": round(elapsed / len(clips), 2), "rtf": round(elapsed / max(audio_seconds, 1e-9), 3),
-            "load_seconds": round(load_s, 1), "worst": [{"clip": c, "expected": r, "got": g} for _, c, r, g in worst[:3]],
-        })
+    try:
+        for spec in model_names:
+            from .engines import ENGINES
+            # spec = [engine:]model[@lang][+hing]   e.g. small, small@en+hing, parakeet:nemo-parakeet-tdt-0.6b-v3
+            body, plus, flag = spec.partition("+")
+            body, at, lang = body.partition("@")
+            head, _, tail = body.partition(":")
+            eng_name, name = (head, tail) if head in ENGINES else (engine, body)         # (a path like C:\\models has a colon too)
+            prompt = HINGLISH_PROMPT if flag == "hing" else ""
+            lang = lang or None
+            say(f"\n== {spec}")
+            try:
+                if eng_name == "whisper" and name in models.MODELS and not models.is_downloaded(name):
+                    say(f"   downloading {name} (about {models.MODELS[name][0]:,} MB, once; Ctrl+C keeps what is done)")
+                    shown = [-1]
+
+                    def show(frac, text):
+                        pct = int(frac * 100)
+                        if pct != shown[0]:
+                            shown[0] = pct
+                            print(f"\r   {pct:3d}%  {text}      ", end="", flush=True)
+                    models.download(name, on_progress=show)
+                    print()
+                t0 = time.time()
+                eng = make_engine(eng_name, name, beam, prompt)
+                load_s = time.time() - t0
+            except Exception as e:                              # one bad model must not lose the others' results
+                print()
+                say(f"   skipped: {e}")
+                continue
+            errs = words = 0
+            elapsed = 0.0
+            worst = []
+            for clip, audio, ref in clips:
+                t1 = time.time()
+                text, _ = eng(audio, lang, keywords if getattr(eng, "supports_hotwords", True) else None)
+                elapsed += time.time() - t1
+                if pipeline:
+                    text = smart_format(apply_commands(clean(vocab.apply(text))))
+                e, n = wer(ref, text)
+                errs, words = errs + e, words + n
+                if e:
+                    worst.append((e, clip, ref, text))
+            eng.unload()
+            worst.sort(reverse=True)
+            result = {
+                "model": spec, "engine": eng_name, "wer": round(100 * errs / max(words, 1), 2), "errors": errs, "words": words,
+                "seconds_per_clip": round(elapsed / len(clips), 2), "rtf": round(elapsed / max(audio_seconds, 1e-9), 3),
+                "load_seconds": round(load_s, 1), "worst": [{"clip": c, "expected": r, "got": g} for _, c, r, g in worst[:3]],
+            }
+            results.append(result)
+            say(f"   WER {result['wer']}%  ({result['errors']} errors in {result['words']} words), "
+                f"{result['seconds_per_clip']} s per clip")
+    except KeyboardInterrupt:
+        print()
+        say("Stopped. Results for the models that finished:")
     return results
 
 
