@@ -278,7 +278,20 @@ def _fused(m, text):
     return f"{m.group(1)}@{m.group(2)}".lower()
 
 
+_DOTTED = re.compile(rf"\b([A-Za-z][A-Za-z0-9_+-]{{1,30}})\.([A-Za-z0-9-]{{2,}}\.{_TLD})\b(?!@)", re.I)
+_ID_CONTEXT = {"email", "e-mail", "mail", "id", "address"}
+
+
+def _dotted(m, text):
+    """'my email id is john.example.com': Whisper dropped the 'at'. Only right after email words."""
+    before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-4:]]
+    if "@" in text[max(0, m.start() - 1): m.end() + 1] or not any(w in _ID_CONTEXT for w in before):
+        return m.group(0)
+    return f"{m.group(1)}@{m.group(2)}".lower()
+
+
 def _smart_web(text: str) -> str:
+    text = _DOTTED.sub(lambda m: _dotted(m, text), text)
     text = _FUSED.sub(lambda m: _fused(m, text), text)
     text = _AT_RATE.sub(lambda m: f"{m.group(1)}@{m.group(2)}", text)
     text = _AT_SIGN.sub(lambda m: f"{m.group(1)}@{m.group(2)}", text)

@@ -101,3 +101,15 @@ def mask_win():
     except Exception:
         pass
 
+
+
+def release_win_masked(vk: int):
+    """Finish a Win key-up that Holler held back: send the mask key first, then the Win key-up, so Windows
+    sees a shortcut instead of a lone Win press and does not open the Start menu."""
+    try:
+        m = keyboard.KeyCode.from_vk(MASK_VK)
+        kb.press(m)
+        kb.release(m)
+        kb.release(keyboard.Key.cmd_r if vk == 0x5C else keyboard.Key.cmd_l)
+    except Exception:
+        pass

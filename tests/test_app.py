@@ -243,5 +243,25 @@ app.held.add("l"); app.held_t["l"] = time.time() - 10
 dictate("Ghost keys are ignored.")
 check("stale ghost key is dropped and dictation works", PASTED and PASTED[-1] == "Ghost keys are ignored. ")
 
+# 11. Start-menu guard: after a chord with Win, the real Win key-up is held back (and replayed after a mask key)
+class FakeListener:
+    suppressed = False
+
+    def suppress_event(self):
+        FakeListener.suppressed = True
+
+
+app.listener = FakeListener()
+app.held.update({Key.cmd_l}); app.win_used = True
+D = types.SimpleNamespace
+check("injected keystrokes are ignored", app._filter(0x0100, D(flags=0x10, vkCode=0x41)) is False)
+app._filter(0x0101, D(flags=0, vkCode=0x5B))
+check("Win key-up after a Holler chord is held back", FakeListener.suppressed and not app.win_used)
+check("Holler still registers the Win release", Key.cmd_l not in app.held)
+FakeListener.suppressed = False
+app._filter(0x0101, D(flags=0, vkCode=0x5B))
+check("an ordinary Win key-up passes through", not FakeListener.suppressed)
+app.listener = None
+
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)

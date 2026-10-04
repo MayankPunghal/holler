@@ -369,7 +369,7 @@ Report vulnerabilities as described in [SECURITY.md](https://github.com/MayankPu
 - **`holler` is not recognised.** Use `py -m holler`.
 - **The hotkey doesn't work in some app.** Choose a different chord in Settings. If the app runs as Administrator, run Holler as Administrator too.
 - **The hotkey stops responding after a while, or the tray icon disappears.** Holler restarts itself if it crashes, renews its keyboard hook every 15 minutes and after sleep, and reopens the microphone if it stops delivering audio. If it still happens, send `holler.log` and `crash.log` from the data folder (`holler where`) in an issue. The hotkey also can't see keys typed into a window that runs as Administrator unless Holler does too, and it ignores keystrokes injected by software (so a key remapped by a tool such as AutoHotkey won't trigger it).
-- **The Start menu or search opens when I let go of Ctrl+Win.** Holler now sends a dummy key while the Win key is held, which stops Windows opening Start when the keys are released unevenly.
+- **The Start menu or search opens when I let go of Ctrl+Win.** Holler holds back the Win key-up after its own chords and replays it after a dummy key, so Windows doesn't treat it as a lone Win press. If you still see it, tell us your Windows version in an issue.
 - **A letter is typed when I use a chord.** Your layout treats that combination as a character (Ctrl+Alt is AltGr on many layouts). Use a modifier-only chord such as `ctrl+shift+win`.
 - **Nothing is pasted.** Try `paste: "type"` for apps that block paste, or `ctrl+shift+v` for Linux terminals.
 - **The pill doesn't show over some app.** Known issue: windows that pin themselves to the top (such as Claude Desktop on some setups) can hide it. Dictation still works.

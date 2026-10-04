@@ -48,6 +48,8 @@ check("'look at google.com' untouched", full("Look at google.com"), "Look at goo
 check("at the rate with commas", full("Send it to john, at the rate, example dot com"), "Send it to john@example.com")
 check("at the rate of", full("john at the rate of gmail.com"), "john@gmail.com")
 check("fused address in email context", full("Send it to johnatexample.com."), "Send it to john@example.com.")
+check("dropped 'at' after email words", full("My email id is john.example.com"), "My email id is john@example.com")
+check("dotted domain elsewhere untouched", full("Open mail.google.com now"), "Open mail.google.com now")
 check("fused address outside email context", full("Visit whatever.com today"), "Visit whatever.com today")
 
 d = tempfile.mkdtemp()
