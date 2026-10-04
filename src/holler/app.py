@@ -19,6 +19,11 @@ from .vocab import Vocab, align
 
 class App:
     def __init__(self, cfg, download_only=False, tray=False):
+        for stream in (sys.stdout, sys.stderr):          # a "\u20b9" or Hindi word must never break a dictation
+            try:
+                stream.reconfigure(errors="replace")
+            except (AttributeError, ValueError):
+                pass
         self.cfg = cfg
         self.home = data_dir()
         self.talk = Combo(cfg.key)
