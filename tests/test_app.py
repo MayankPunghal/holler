@@ -117,7 +117,7 @@ from holler import app as appmod, config, audio, models  # noqa: E402
 models.is_downloaded = lambda name: True          # no network in tests
 
 audio.TAIL_S = 0.05
-cfg = config.settings({"hold_ms": 200, "unload_after": 0.01, "overlay": False, "sound": False})
+cfg = config.settings({"hold_ms": 200, "unload_after": 0.01, "overlay": False, "sound": False, "undo_key": "ctrl+alt"})
 cfg.overlay, cfg.sound = False, False
 app = appmod.App(cfg)
 threading.Thread(target=app.boot, daemon=True).start()
@@ -283,6 +283,17 @@ rep = open(os.path.join(app.home, "replacements.txt"), encoding="utf-8").read().
 check("different sentence after undo is not learned", "two =>" not in rep and "2nd" not in rep)
 pending = rep
 check("undo then redo teaches the correction (seen twice)", "flurb => blurb" in rep)
+
+# 14. the default undo chord Ctrl+Shift+Z (not modifier-only: fires on Z, waits for the keys to come up)
+from holler.keys import Combo  # noqa: E402
+app.undo_combo = Combo("ctrl+shift+z")
+dictate("Undo me with the default chord.")
+del EVENTS[:]
+Z = KeyCode(char="\x1a", vk=90)
+app.on_press(CTRL); app.on_press(SHIFT); app.on_press(Z); time.sleep(0.2)
+app.on_release(Z); app.on_release(SHIFT); app.on_release(CTRL); time.sleep(1.0)
+n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
+check("Ctrl+Shift+Z undoes exactly the last dictation", n_bs == len("Undo me with the default chord. "))
 
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)

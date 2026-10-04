@@ -10,7 +10,7 @@ DEFAULTS = {
     "key": "ctrl+win",           # key or chord to hold while speaking
     "hold_ms": 350,              # hold time before recording starts (0 = instantly)
     "teach_key": "ctrl+shift+win",  # hold to learn from the correction on the current line
-    "undo_key": "ctrl+alt",        # hold to delete the last dictation ("" = off); saying "scratch that" alone does the same
+    "undo_key": "ctrl+shift+z",   # hold to delete the last dictation ("" = off); saying "scratch that" alone does the same
     "engine": "whisper",         # speech engine (see holler.engines); only whisper is built in for now
     "model": "small.en",
     "beam": 2,

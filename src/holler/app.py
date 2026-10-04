@@ -184,6 +184,7 @@ class App:
             self.last_undo = time.time()
             text, _ = self.pasted.pop()
             self._wait_released(wait)
+            time.sleep(0.25)                              # let the app finish handling the key-ups first
             print(f"Undo: sending {len(text)} Backspaces to window '{foreground_title()}', keys still held: "
                   f"{[getattr(k, 'name', k) for k in self.held]}", flush=True)
             self.synth = True
@@ -195,6 +196,7 @@ class App:
             print(f"Undo: removed {len(text)} characters.", flush=True)
             self.last = self.pasted[-1][0].strip() if self.pasted else ""
             self.overlay.set("undone")
+            self._start_listener()                        # fresh hook and key state after injecting keystrokes
         except Exception:
             log_error("undo")
             self.overlay.set("error")
@@ -286,9 +288,11 @@ class App:
             self.overlay.set("hide")
 
     def on_press(self, key):
-        if self.synth or getattr(key, "vk", None) == MASK_VK:
+        if self.synth or getattr(key, "vk", None) in (0, MASK_VK, 0xFF):
             return
         kid = key_id(key)
+        if not kid:
+            return
         if kid == K.esc:
             with self.st:
                 was_down, self.down = self.down, False
@@ -310,7 +314,7 @@ class App:
             if self.undo_combo.modifier_only:
                 self._start_undo_timer()
             else:
-                threading.Thread(target=self.undo, daemon=True).start()
+                threading.Thread(target=lambda: self.undo(wait=4.0), daemon=True).start()
             return
         if self.teach_combo.complete(self.held) and not was_teach:
             self._interrupt_recording()
@@ -321,7 +325,10 @@ class App:
                 threading.Thread(target=self.teach, daemon=True).start()
             return
         if self.talk.complete(self.held) and not was_talk:
-            if any(not self.talk.includes(k) for k in self.held) or self.rec is None or self.paused:
+            extra = [getattr(k, "name", k) for k in self.held if not self.talk.includes(k)]
+            if extra or self.rec is None or self.paused:
+                if extra:
+                    print(f"Ignored {self.talk}: other keys are held: {extra}", flush=True)
                 return                                    # extra keys held: this is some other shortcut
             self._mask(self.talk)
             with self.st:
@@ -338,7 +345,7 @@ class App:
             self._cancel_pending()                        # a shortcut (Ctrl+Win+Left ...): not a dictation
 
     def on_release(self, key):
-        if self.synth or getattr(key, "vk", None) == MASK_VK:
+        if self.synth or getattr(key, "vk", None) in (0, MASK_VK, 0xFF):
             return
         kid = key_id(key)
         was_talk = self.talk.complete(self.held)
