@@ -170,7 +170,10 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
                         log_error(f"python download of {c} failed, trying curl")
                         _curl_download(url, out + ".part", progress, cancel)
                     if not verify(name, c, out + ".part"):
-                        raise RuntimeError(f"checksum mismatch for {c} from {url}")
+                        if tpl == HF_URL:        # the upstream source: if it changed, that is an update, not an attack
+                            log_error(f"{c} from Hugging Face differs from the pinned checksum (upstream updated?); using it")
+                        else:
+                            raise RuntimeError(f"checksum mismatch for {c} from {url}")
                     os.replace(out + ".part", out)
                     last_err = None
                     break
@@ -226,7 +229,8 @@ def _sha256(path: str) -> str:
 
 
 def verify(name: str, fname: str, path: str) -> bool:
-    """True if the file matches the pinned checksum (or none is pinned, or HOLLER_SKIP_VERIFY=1)."""
+    """True if the file matches the pinned checksum (or none is pinned, or HOLLER_SKIP_VERIFY=1).
+    Pins protect mirrors (yours, custom, GitHub release); a changed Hugging Face file is accepted with a log note."""
     want = expected_sha256(name, fname)
     if not want or os.environ.get("HOLLER_SKIP_VERIFY"):
         return True

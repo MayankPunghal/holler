@@ -82,26 +82,32 @@ def test_auto_mirror_after_download():
     assert os.path.exists(os.path.join(out, "base.en-model.bin")) and os.path.exists(os.path.join(out, "base.en-vocabulary.txt"))
 
 
-def test_checksum_rejects_bad_mirror_and_falls_through():
-    calls = []
-
-    def fake(url, out, progress, cancel):
-        calls.append(url)
-        # Hugging Face "serves" corrupt weights; the release mirror serves the right bytes.
-        data = b"corrupt" if "huggingface" in url else b"good-weights"
-        open(out, "wb").write(data)
-        progress(len(data))
-
+def test_checksum_rejects_bad_mirror_but_accepts_upstream_update():
     import hashlib
     models.expected_sha256 = lambda n, f: hashlib.sha256(b"good-weights").hexdigest() if f == "model.bin" else None
     old = models._py_download
-    models._py_download = fake
+
+    def run(name, serve):
+        def fake(url, out, progress, cancel):
+            data = serve(url)
+            open(out, "wb").write(data)
+            progress(len(data))
+        models._py_download = fake
+        try:
+            return models.download(name)
+        finally:
+            models._py_download = old
+
+    # 1) a custom mirror serves corrupt bytes -> rejected, Hugging Face is used
+    os.environ["HOLLER_MODEL_URL"] = "https://mirror.example/m"
     try:
-        d = models.download("medium.en")
+        d = run("medium.en", lambda u: b"corrupt" if "mirror.example" in u else b"good-weights")
     finally:
-        models._py_download = old
+        os.environ.pop("HOLLER_MODEL_URL")
     assert open(os.path.join(d, "model.bin"), "rb").read() == b"good-weights"
-    assert any("releases" in u and u.endswith("medium.en-model.bin") for u in calls)
+    # 2) Hugging Face now serves a newer file than the pin -> accepted (upstream update)
+    d = run("large-v3-turbo", lambda u: b"newer-upstream-weights")
+    assert open(os.path.join(d, "model.bin"), "rb").read() == b"newer-upstream-weights"
 
 
 def test_pinned_hashes_present():
@@ -112,7 +118,7 @@ def test_pinned_hashes_present():
 
 
 if __name__ == "__main__":
-    test_checksum_rejects_bad_mirror_and_falls_through()
+    test_checksum_rejects_bad_mirror_but_accepts_upstream_update()
     test_pinned_hashes_present()
     test_auto_mirror_after_download()
     test_custom_models()
