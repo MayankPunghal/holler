@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+- First release on PyPI (`pip install holler`). Everything from 0.3 to 0.7: background mode with tray, setup wizard and Settings, model mirrors with checksums, custom models, engine plugins, `holler bench`, optional Parakeet engine, Hinglish prompt support.
+- Known issue: the status pill can stay hidden behind Claude Desktop's window on some setups.
+
 ## 0.7.0
 - Hinglish and Hindi: new `initial_prompt` setting (Whisper) to steer output into Roman script, plus a 12-sentence Hinglish bench set (`holler bench record --set hinglish`).
 - `holler bench` variants: `small@en+hing` = model `small`, language en, with the Roman-Hinglish prompt (`@hi`, `@en`, `+hing` can be mixed per model).

@@ -7,11 +7,11 @@
 Free, offline, push-to-talk dictation for Windows. Works in every app, learns your jargon, understands when you correct yourself mid-sentence. Powered by Whisper running on your own CPU: no account, no cloud, no subscription.
 
 [![PyPI](https://img.shields.io/pypi/v/holler)](https://pypi.org/project/holler/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/MayankPunghal/holler/blob/main/LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 
-![Holler status pill](docs/pill-demo.gif)
+![Holler status pill](https://raw.githubusercontent.com/MayankPunghal/holler/main/docs/pill-demo.gif)
 
 </div>
 
@@ -28,7 +28,7 @@ Free, offline, push-to-talk dictation for Windows. Works in every app, learns yo
 
 You need **Windows 10/11** and **Python 3.10 or newer** ([download](https://www.python.org/downloads/); tick "Add python.exe to PATH" in the installer).
 
-**From PyPI** (once published):
+**From PyPI:**
 
 ```powershell
 py -m pip install holler
@@ -190,7 +190,7 @@ Layout: `src/holler/` has `cli`, `app` (hotkey state machine and pipeline), `key
 
 ## Status and roadmap
 
-Holler is in beta and built for Windows 10/11. The logic is tested; the Windows-specific parts (hotkeys, pill, tray, paste) are checked by hand. macOS and Linux are untested. Next: Moonshine and Qwen3-ASR as optional engines, if `holler bench` shows they help. Ideas: streaming partial text, GPU support, a Windows installer. Issues and pull requests are welcome, and a star helps others find it.
+Holler 1.0 is built for Windows 10/11. The logic is tested; the Windows-specific parts (hotkeys, pill, tray, paste) are checked by hand. macOS and Linux are untested. Next: Moonshine and Qwen3-ASR as optional engines, if `holler bench` shows they help. Ideas: streaming partial text, GPU support, a Windows installer. Issues and pull requests are welcome, and a star helps others find it.
 
 ## Credits
 

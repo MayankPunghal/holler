@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "holler"
-version = "0.7.0"
+version = "1.0.0"
 description = "Free, offline push-to-talk dictation: hold a key, speak, and your words appear in any app. Local Whisper, no cloud, learns your jargon."
 readme = "README.md"
 license = { text = "MIT" }
@@ -13,7 +13,7 @@ authors = [{ name = "Mayank Punghal" }]
 keywords = ["dictation", "speech-to-text", "voice-typing", "whisper", "faster-whisper", "push-to-talk",
             "offline", "stt", "voice-input", "wispr-flow-alternative"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Win32 (MS Windows)",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
