@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 (in development)
 - Fixes: releasing Ctrl and Win unevenly no longer opens the Start menu; AltGr counts as Alt in chords; adding the undo chord while recording drops the recording and undoes; "at the rate" and "at sign" make `@`; "name at domain.com" becomes an email in mail context; commands also work at the end of a clause; dots inside words (`Program.cs`) are no longer treated as sentence ends; the pill says "Learned" after an auto-learn.
 - Reliability: Holler now runs under a small supervisor that restarts it if it crashes; it renews the keyboard hook and reopens the microphone after sleep/resume or when they stop responding; output goes to `holler.log` and hard crashes to `crash.log` in the data folder.
 - Undo: hold Ctrl+Alt (`undo_key`) or say "scratch that" on its own to delete the last dictation.

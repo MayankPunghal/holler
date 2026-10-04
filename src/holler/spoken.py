@@ -250,7 +250,7 @@ def _dots(s):
 _PATH = re.compile(rf"\b([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.{_TLD}) slash ([A-Za-z0-9_.-]+(?: slash [A-Za-z0-9_.-]+)*)", re.I)
 
 
-_AT_RATE = re.compile(r"(\S+)\s+at[- ]the[- ]rate(?:[- ]of)?(?:[- ](?:sign|symbol))?\s+(\S+)", re.I)
+_AT_RATE = re.compile(r"([^\s,]+),?\s+at[- ]the[- ]rate(?:[- ]of)?(?:[- ](?:sign|symbol))?,?\s+(\S+)", re.I)
 _AT_SIGN = re.compile(r"(\S+)\s+at[- ]sign\s+(\S+)", re.I)
 _AT_DOMAIN = re.compile(rf"\b([A-Za-z0-9_.+-]+) at ([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.{_TLD})\b", re.I)
 _MAIL_WORDS = {"email", "e-mail", "mail", "send", "sent", "contact", "cc", "bcc", "write", "reach", "address",

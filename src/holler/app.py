@@ -64,7 +64,8 @@ class App:
             if a.auto_vocab:
                 threading.Thread(target=self._auto_vocab, daemon=True).start()
             hold = f" for {a.hold_ms} ms" if self.hold_s else ""
-            print(f"Ready ({a.engine} {a.model}). Hold [{a.key}]{hold} and speak; release to paste. "
+            from . import __version__
+            print(f"Holler {__version__}. Ready ({a.engine} {a.model}). Hold [{a.key}]{hold} and speak; release to paste. "
                   f"Esc cancels. Learn a fix: [{a.teach_key}]."
                   + (f" Undo: [{a.undo_key}] or say \"scratch that\"." if a.undo_key else ""), flush=True)
         except Exception:
@@ -258,10 +259,10 @@ class App:
         t.start()
 
     def _mask(self, combo):
-        """If the chord holds Win, send a dummy key so releasing Win never opens the Start menu."""
+        """If the chord holds Win or Alt, send a dummy key so releasing it alone never opens Start or a menu bar."""
         if sys.platform == "win32" and combo is not None and any(
-                k in slot for slot in combo.slots for k in GROUPS["win"]):
-            mask_win()
+                k in slot for slot in combo.slots for k in GROUPS["win"] | GROUPS["alt"]):
+            mask_win()          # Alt pressed and released alone would highlight the menu bar and eat keystrokes
 
     def _interrupt_recording(self):
         """A different chord was completed while recording: drop the recording."""

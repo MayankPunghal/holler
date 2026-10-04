@@ -91,8 +91,7 @@ def backspace(n: int):
     for i in range(max(0, n)):
         kb.press(keyboard.Key.backspace)
         kb.release(keyboard.Key.backspace)
-        if i % 50 == 49:
-            time.sleep(0.02)
+        time.sleep(0.004)          # some apps drop keystrokes that arrive too fast
 
 
 MASK_VK = 0xE8        # an unassigned virtual key (the one AutoHotkey uses for the same trick)
