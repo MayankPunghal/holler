@@ -272,5 +272,23 @@ app.on_press(CTRL); app.on_press(SHIFT); time.sleep(1.5); feed(0.1, 10); app.on_
 app.on_release(RIGHT); app.on_release(SHIFT); app.on_release(CTRL); time.sleep(0.8)
 check("Ctrl+Shift held, then an arrow (text selection) is not a dictation", len(PASTED) == n)
 
+# 14. teach with only a fragment selected, and with an older dictation (not the last one)
+def dictate_cs(text):
+    RAW["v"] = text
+    feed(0.0, 10)
+    app.on_press(CTRL); app.on_press(SHIFT); time.sleep(0.3); feed(0.1, 20); app.on_release(SHIFT); app.on_release(CTRL)
+    time.sleep(0.8)
+
+
+dictate_cs("We should deploy the Flarp service on Monday morning.")
+dictate_cs("Second unrelated sentence here.")
+LINE["v"] = "deploy the Flurp service"
+appmod.copy_selection = lambda whole_line=False: LINE["v"]
+app.teach(); time.sleep(0.2)
+rep = open(os.path.join(app.home, "replacements.txt"), encoding="utf-8").read().lower()
+pend = os.path.join(app.home, "replacements_pending.json")
+pending = open(pend).read().lower() if os.path.exists(pend) else ""
+check("teach works from a selected fragment of an older dictation", "flarp" in rep or "flarp" in pending)
+
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)

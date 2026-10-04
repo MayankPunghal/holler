@@ -178,7 +178,7 @@ Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon
 Whisper itself doesn't learn, so Holler learns the words around it, three ways:
 
 1. **Vocabulary tab.** Add jargon and names (`xUnit`, `Kubernetes`, `Priya`) and "wrong → right" corrections. Your vocabulary is also passed to Whisper as hotwords, which biases decoding toward your terms.
-2. **Correct, then press Ctrl+Shift+Space.** Dictate, fix the wrong word in that line, leave the cursor on it, and press Ctrl+Shift+Space. Holler compares what it pasted with your fix and remembers it.
+2. **Correct, then press Ctrl+Shift+Space.** Fix the wrong word by hand, select the corrected words (or just leave the cursor on that line), and press Ctrl+Shift+Space. It works for any of your last 10 dictations. Holler compares what it pasted with your fix and remembers it.
 3. **History tab.** Pick a past dictation, fix the text and click *Learn*.
 
 A fix that includes a neighbouring word ("null difference" → "null reference") is learned immediately. A fix to a single ordinary word is learned after you correct it twice, so one odd correction can't break a normal word everywhere.

@@ -38,7 +38,7 @@ class App:
         self.synth = False                   # True while WE are sending keystrokes (ignore them)
         self.engine = None
         self.rec = None
-        self.last = ""                       # last text pasted (for learning)
+        self.recent = []                     # recent dictations, newest last (for learning a correction)
         self.paused = False
         self.teach_timer = None
         self.n_dictations = 0
@@ -118,7 +118,7 @@ class App:
                 self.overlay.set("empty")
                 return
             print(f"[{lang}] {raw}" + ("" if text == raw else f"  =>  {text}"), flush=True)
-            self.last = text
+            self.recent = (self.recent + [text])[-10:]
             if a.log:
                 try:
                     with open(os.path.join(self.home, "dictation_log.tsv"), "a", encoding="utf-8") as f:
@@ -150,9 +150,23 @@ class App:
         except Exception:
             log_error("auto-vocab")
 
+    def _match_edit(self, sel):
+        """Find which recent dictation the copied text is a corrected version of. The copy may be a whole
+        (wrapped) line holding several dictations, or just a fragment of one. Returns (dictated, corrected)."""
+        for dictated in reversed(self.recent):
+            if len(sel.split()) < len(dictated.split()):
+                part = align(sel, dictated)                # the piece of the dictation the fragment covers
+                if self.vocab.learn_preview(part, sel):
+                    return part, sel
+            else:
+                part = align(dictated, sel)                # the piece of the line that is this dictation
+                if self.vocab.learn_preview(dictated, part):
+                    return dictated, part
+        return None
+
     def teach(self):
         try:
-            if not self.last:
+            if not self.recent:
                 self.overlay.set("nomatch")
                 return
             self._wait_released()
@@ -161,20 +175,23 @@ class App:
                 sel = copy_selection(whole_line=True).strip()
             finally:
                 self.synth = False
-            sel = align(self.last, sel) if sel else ""
             if not sel:
+                print("Teach: couldn't copy any text (select the corrected words and try again).", flush=True)
                 self.overlay.set("nomatch")
                 return
-            msgs = self.vocab.learn_from_edit(self.last, sel)
-            if msgs is None:
-                print("Teach: that text doesn't look like the last dictation.", flush=True)
+            found = self._match_edit(sel)
+            if not found:
+                print(f"Teach: '{sel[:80]}' doesn't look like a corrected version of a recent dictation.", flush=True)
                 self.overlay.set("nomatch")
-            elif not msgs:
+                return
+            dictated, corrected = found
+            msgs = self.vocab.learn_from_edit(dictated, corrected)
+            if not msgs:
                 self.overlay.set("nothing")
             else:
                 for m in msgs:
                     print("Teach:", m, flush=True)
-                self.last = sel
+                self.recent = [corrected if d == dictated else d for d in self.recent]
                 self.overlay.set("learned")
         except Exception:
             log_error("teach")

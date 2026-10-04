@@ -20,7 +20,7 @@ COMMANDS = {
     "new line": ("\n", "break"), "newline": ("\n", "break"),
     "new paragraph": ("\n\n", "break"), "next paragraph": ("\n\n", "break"),
     "question mark": ("?", "end"),
-    "exclamation mark": ("!", "end"), "exclamation point": ("!", "end"),
+    "exclamation mark": ("!", "end"), "exclamation point": ("!", "end"), "exclamation": ("!", "end"),
     "full stop": (".", "end"), "period": (".", "end"),
     "comma": (",", "end"), "colon": (":", "end"), "semicolon": (";", "end"), "semi colon": (";", "end"),
     "open bracket": ("(", "open"), "open parenthesis": ("(", "open"), "open paren": ("(", "open"),
@@ -42,7 +42,8 @@ def _is_cmd(words: str):
 
 _TRAILING = ("new paragraph", "new line", "question mark", "exclamation mark", "exclamation point")
 _NOT_BEFORE = {"the", "a", "an", "this", "that", "my", "your", "no", "of", "with", "add", "insert", "type", "put",
-               "use", "is", "as", "for", "called", "another", "one", "each", "every", "after", "before"}
+               "use", "is", "as", "for", "called", "another", "one", "each", "every", "after", "before",
+               "said", "say", "says", "saying", "word", "words", "typed", "write", "wrote", "named", "like"}
 
 
 def _split_trailing(p: str):
@@ -96,7 +97,8 @@ def apply_commands(text: str) -> str:
                 if not out.endswith(tuple(_PUNCT)):
                     out += sym
                 else:
-                    out = out[:-1] + sym if out[-1] in ",;:" else out
+                    if out[-1] in ",;:" or (sym in "!?" and out[-1] == "."):
+                        out = out[:-1] + sym          # "fun. Exclamation." -> "fun!"
                 if sym in ".!?":
                     cap = True
             elif kind == "open":
@@ -270,12 +272,21 @@ _FUSE_CONTEXT = {"email", "e-mail", "mail", "send", "sent", "contact", "cc", "bc
                  "write"}
 
 
+def _strip_id_words(local: str) -> str:
+    """Whisper glues the words before an address onto it: 'emailidjohn' -> 'john'."""
+    low = local.lower()
+    for w in ("emailaddress", "emailid", "mailid", "email"):
+        if low.startswith(w) and len(local) - len(w) >= 2:
+            return local[len(w):]
+    return local
+
+
 def _fused(m, text):
     """Whisper often writes a spoken address as one word: 'johnatexample.com'. Split it only in an email context."""
     before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-4:]]
     if not any(w in _FUSE_CONTEXT for w in before) or len(re.findall("at", m.group(0), re.I)) != 1:
         return m.group(0)
-    return f"{m.group(1)}@{m.group(2)}".lower()
+    return f"{_strip_id_words(m.group(1))}@{m.group(2)}".lower()
 
 
 _DOTTED = re.compile(rf"\b([A-Za-z][A-Za-z0-9_+-]{{1,30}})\.([A-Za-z0-9-]{{2,}}\.{_TLD})\b(?!@)", re.I)
@@ -287,7 +298,7 @@ def _dotted(m, text):
     before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-4:]]
     if "@" in text[max(0, m.start() - 1): m.end() + 1] or not any(w in _ID_CONTEXT for w in before):
         return m.group(0)
-    return f"{m.group(1)}@{m.group(2)}".lower()
+    return f"{_strip_id_words(m.group(1))}@{m.group(2)}".lower()
 
 
 def _smart_web(text: str) -> str:

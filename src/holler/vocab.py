@@ -297,6 +297,11 @@ class Vocab:
                 self.add_keyword(right)           # also feed the right spelling to Whisper's glossary
             return note + f"learned: {wrong} -> {right}"
 
+    def learn_preview(self, dictated: str, corrected: str) -> bool:
+        """True if `corrected` is a correction of `dictated` (same sentence, something changed)."""
+        res = diff_pairs(dictated, corrected)
+        return bool(res and (res[0] or res[1]))
+
     def learn_from_edit(self, dictated: str, corrected: str):
         """Compare dictated text to its corrected version and learn every difference.
         Returns a list of messages, or None if the two texts are too different."""

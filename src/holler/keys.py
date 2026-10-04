@@ -42,16 +42,16 @@ def key_id(key):
     """A comparable identity for a pynput key. Character keys become their lower-case letter, which also
     works while Ctrl is held (when the OS reports a control character instead)."""
     if isinstance(key, keyboard.KeyCode):
-        ch = getattr(key, "char", None)
-        if ch and ch.isprintable():
-            return ch.lower()
         vk = getattr(key, "vk", None)
-        if vk and 48 <= vk <= 90:
+        if vk and 48 <= vk <= 90:               # by physical key, so Shift+1 ("!") and its release ("1") match
             return chr(vk).lower()
         if vk:
             ch = _oem_char(vk)
             if ch:
                 return ch
+        ch = getattr(key, "char", None)
+        if ch and ch.isprintable():
+            return ch.lower()
         return vk
     return key
 

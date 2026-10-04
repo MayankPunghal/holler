@@ -1,9 +1,10 @@
 # Changelog
 
 ## 1.1.0 (in development)
+- Learning a correction (Ctrl+Shift+Space) works when only the fixed words are selected, when the line wraps or holds several dictations, and for any of the last 10 dictations, not only the latest.
 - New default keys: hold **Ctrl+Shift** to dictate, **Ctrl+Shift+Space** to learn a correction. The old Win-key defaults are switched over automatically: Windows opens the Start menu whenever Win is released, and no workaround was reliable.
 - Spoken commands (`spoken_commands`): "new line", "new paragraph", "question mark", "open bracket" and more become symbols when they stand on their own or end a clause; a phrase being talked about ("add a new line") is left alone.
-- Smart formatting (`smart_format`): `25%`, `₹500`, `john@example.com` (also from "at the rate", and "my email id is john.example.com" when Whisper drops the "at"), `github.com/holler`, `main.py`.
+- Smart formatting (`smart_format`): `25%`, `₹500`, `john@example.com` (also from "at the rate", from "emailidjohnatexample.com", and "my email id is john.example.com" when Whisper drops the "at"), `github.com/holler`, `main.py`.
 - Automatic vocabulary (`auto_vocab`): identifiers you dictate often (3+ times) are added as glossary-only entries. `holler suggest` previews them; `holler try TEXT` shows what a sentence would paste.
 - Starter vocabulary packs (web, cloud-devops, dotnet, python-data, general-tech), merged once into every vocabulary. `holler packs`, `holler import --pack NAME`.
 - Reliability: a supervisor restarts Holler if it crashes; after sleep the keyboard hook and microphone are renewed and any half-finished state is dropped; "ghost" keys (key-ups the hook never saw, such as after Win+L) are cleared by asking Windows for the real key state; keystrokes injected by software are ignored by the hotkey; any other key pressed during a recording cancels it, so shortcuts that share the chord's keys don't record; output goes to `holler.log`, hard crashes to `crash.log`.
