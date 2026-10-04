@@ -15,6 +15,8 @@ ENGINES = {
     "parakeet": "holler.engines.parakeet:ParakeetEngine",       # optional: pip install holler[parakeet]
 }
 DEFAULT_MODELS = {"whisper": "small.en", "parakeet": "nemo-parakeet-tdt-0.6b-v3"}
+# Models offered in Settings for each engine (Whisper's come from holler.models.MODELS).
+ENGINE_MODELS = {"parakeet": ["nemo-parakeet-tdt-0.6b-v3", "nemo-parakeet-tdt-0.6b-v2"]}
 
 
 def make_engine(engine: str, model: str, beam: int = 2, initial_prompt: str = ""):

@@ -47,8 +47,8 @@ class General(ttk.Frame):
         self._default_models = DEFAULT_MODELS
 
         self.model = tk.StringVar(value=c["model"])
-        names = [n for n, _ in model_choices()]
-        mc = ttk.Combobox(self, textvariable=self.model, values=names, width=34)
+        mc = ttk.Combobox(self, textvariable=self.model, values=self._model_names(self.engine.get()), width=34)
+        self.model_box = mc
         mc.bind("<<ComboboxSelected>>", lambda e: self._model_changed())
         mc.bind("<FocusOut>", lambda e: self._model_changed())
         mc.bind("<Return>", lambda e: self._model_changed())
@@ -91,8 +91,14 @@ class General(ttk.Frame):
         ttk.Checkbutton(self, text="Start with the computer", variable=self.auto).grid(row=r, column=0, columnspan=3,
                                                                                          sticky="w", pady=2)
 
+    @staticmethod
+    def _model_names(engine):
+        from ..engines import ENGINE_MODELS
+        return [n for n, _ in model_choices()] if engine == "whisper" else ENGINE_MODELS.get(engine, [])
+
     def _engine_changed(self):
         eng = self.engine.get()
+        self.model_box.configure(values=self._model_names(eng))
         cur = self.model.get().strip()
         if eng != "whisper" and cur in models.MODELS:
             self.model.set(self._default_models.get(eng, cur))
@@ -307,6 +313,10 @@ class About(ttk.Frame):
         wrap_label(self, "Free, offline push-to-talk dictation. Speech recognition by OpenAI Whisper through "
                          "faster-whisper. Your audio never leaves this computer.", "Sub.TLabel", width=620
                    ).pack(anchor="w", pady=8)
+        ttk.Label(self, text="Made by Mayank Punghal  \u00b7  MIT License  \u00b7  github.com/MayankPunghal/holler"
+                  ).pack(anchor="w", pady=(0, 6))
+        ttk.Button(self, text="Open the project page", command=lambda: __import__("webbrowser").open(
+            "https://github.com/MayankPunghal/holler")).pack(anchor="w")
         ttk.Label(self, text="Your files (settings, vocabulary, history, models):").pack(anchor="w", pady=(10, 2))
         ttk.Label(self, text=data_dir(), relief="groove", padding=4).pack(anchor="w")
         ttk.Button(self, text="Open folder", command=self.open).pack(anchor="w", pady=8)
@@ -324,23 +334,54 @@ class About(ttk.Frame):
             pass
 
 
+def _scrollable(parent):
+    """A frame that scrolls vertically when the window is shorter than its content. Returns (outer, inner)."""
+    outer = ttk.Frame(parent)
+    canvas = tk.Canvas(outer, highlightthickness=0, borderwidth=0)
+    bar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+    inner = ttk.Frame(canvas)
+    win = canvas.create_window((0, 0), window=inner, anchor="nw")
+    inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    canvas.bind("<Configure>", lambda e: canvas.itemconfigure(win, width=e.width))
+    canvas.configure(yscrollcommand=bar.set)
+    canvas.pack(side="left", fill="both", expand=True)
+    bar.pack(side="right", fill="y")
+    try:
+        bg = ttk.Style().lookup("TFrame", "background")
+        if bg:
+            canvas.configure(background=bg)
+    except tk.TclError:
+        pass
+
+    def wheel(e):
+        if inner.winfo_height() > canvas.winfo_height():
+            canvas.yview_scroll(int(-e.delta / 120) if e.delta else (1 if e.num == 5 else -1), "units")
+    for seq in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+        outer.bind_all(seq, wheel, add="+")
+    return outer, inner
+
+
 class SettingsWindow:
     def __init__(self):
         self.cfg = config.load()
         self.vocab = Vocab(data_dir(), PACKAGE_DATA)
         self.root = make_root("Holler settings", "860x700", resizable=True)
-        self.root.minsize(820, 640)
+        h = min(820, self.root.winfo_screenheight() - 90)            # fits small laptop screens
+        self.root.geometry(f"860x{h}")
+        self.root.minsize(820, 480)
+        bar = ttk.Frame(self.root, padding=PAD)
+        bar.pack(side="bottom", fill="x")                            # packed first: Save stays visible at any size
         nb = ttk.Notebook(self.root)
         nb.pack(fill="both", expand=True, padx=PAD, pady=(PAD, 0))
-        self.general = General(nb, self)
+        general_tab, inner = _scrollable(nb)
+        self.general = General(inner, self)
+        self.general.pack(fill="both", expand=True)
         self.tabs_vocab = Vocabulary(nb, self)
         self.history = History(nb, self)
-        nb.add(self.general, text="  General  ")
+        nb.add(general_tab, text="  General  ")
         nb.add(self.tabs_vocab, text="  Vocabulary  ")
         nb.add(self.history, text="  History  ")
         nb.add(About(nb, self), text="  About  ")
-        bar = ttk.Frame(self.root, padding=PAD)
-        bar.pack(fill="x")
         self.status = ttk.Label(bar, text="Vocabulary changes save instantly. General settings need Save.", style="Sub.TLabel")
         self.status.pack(side="left")
         ttk.Button(bar, text="Close", command=self.root.destroy).pack(side="right")

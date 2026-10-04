@@ -21,6 +21,8 @@
 - Changelog link on the PyPI page.
 
 **Fixed**
+- Model downloads: only one download per model at a time (two at once could write a file of the right size with the wrong bytes), every downloaded file is checked against the SHA-256 that Hugging Face publishes, and the progress bar never moves backwards.
+- Settings: the model list shows only the selected engine's models, the General tab scrolls and Save is always visible on small screens, and About shows the author and licence.
 - Holler runs under a small supervisor that restarts it if it crashes. Output is written to `holler.log` and hard crashes to `crash.log` in the data folder.
 - After sleep, the keyboard hook and microphone are renewed. The hotkey no longer stops working because of "ghost" keys (a key-up the hook never saw, such as after Win+L): Holler checks the real key state with Windows and ignores keystrokes injected by software.
 

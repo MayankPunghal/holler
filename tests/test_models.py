@@ -117,7 +117,27 @@ def test_pinned_hashes_present():
         assert len(models.expected_sha256(n, "model.bin")) == 64
 
 
+def test_one_download_per_model():
+    import subprocess, sys as _sys, tempfile as _t
+    d = _t.mkdtemp()
+    other = subprocess.Popen([_sys.executable, "-c", "import time; time.sleep(5)"])
+    try:
+        with open(os.path.join(d, ".downloading"), "w") as f:
+            f.write(str(other.pid))
+        try:
+            with models._DownloadLock(d):
+                raise AssertionError("a second download must not start while another process holds the lock")
+        except RuntimeError as e:
+            assert "already being downloaded" in str(e)
+    finally:
+        other.kill(); other.wait()
+    with models._DownloadLock(d):                       # the other process is gone: its lock is stale
+        assert os.path.exists(os.path.join(d, ".downloading"))
+    assert not os.path.exists(os.path.join(d, ".downloading"))
+
+
 if __name__ == "__main__":
+    test_one_download_per_model()
     test_checksum_rejects_bad_mirror_but_accepts_upstream_update()
     test_pinned_hashes_present()
     test_auto_mirror_after_download()

@@ -131,6 +131,57 @@ def _curl_download(url, out, progress, cancel):
         raise RuntimeError(f"curl failed (exit {p.returncode}) for {url}")
 
 
+def upstream_sha256(name: str) -> dict:
+    """{file: sha256} as published by Hugging Face for this model (best effort; {} when offline). Every large file
+    on Hugging Face carries its SHA-256, so any model can be checked without a hand-kept list."""
+    if os.environ.get("HOLLER_SKIP_VERIFY") or is_local(name):
+        return {}
+    try:
+        import json
+        req = urllib.request.Request(f"https://huggingface.co/api/models/{repo_id(name)}/tree/main",
+                                     headers={"User-Agent": "holler"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            items = json.load(r)
+        return {i["path"]: i["lfs"]["oid"] for i in items if isinstance(i, dict) and i.get("lfs", {}).get("oid")}
+    except Exception:
+        return {}
+
+
+class _DownloadLock:
+    """One download per model at a time. Two processes (say Settings and `holler bench`) writing the same
+    partial file produce a file of the right size with the wrong bytes."""
+
+    def __init__(self, dest):
+        self.path = os.path.join(dest, ".downloading")
+
+    def __enter__(self):
+        from .process import _alive
+        while True:
+            try:
+                fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, str(os.getpid()).encode())
+                os.close(fd)
+                return self
+            except FileExistsError:
+                try:
+                    pid = int(open(self.path).read().strip() or 0)
+                except (OSError, ValueError):
+                    pid = 0
+                if pid and pid != os.getpid() and _alive(pid):
+                    raise RuntimeError("this model is already being downloaded by another Holler window; "
+                                       "wait for it to finish")
+                try:
+                    os.remove(self.path)                    # left over from a download that was killed
+                except OSError:
+                    pass
+
+    def __exit__(self, *exc):
+        try:
+            os.remove(self.path)
+        except OSError:
+            pass
+
+
 def download(name: str, on_progress=None, cancel: threading.Event | None = None) -> str:
     """Download a model into the data folder; returns its folder. on_progress(fraction 0..1, text).
     Python's own HTTPS first; if that is reset (some networks do) retries with curl. Resumes partial files."""
@@ -140,10 +191,18 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
             raise RuntimeError(f"{dest} is missing model files (needs {', '.join(REQUIRED)} and a vocabulary file)")
         return dest
     os.makedirs(dest, exist_ok=True)
+    with _DownloadLock(dest):
+        return _download(name, dest, on_progress, cancel)
+
+
+def _download(name, dest, on_progress, cancel):
     total = MODELS.get(name, (500,))[0] * 1e6
+    upstream = upstream_sha256(name)
     done = [0.0]
 
     def progress(n):
+        if n <= 0:
+            return                       # a restarted transfer never moves the bar backwards
         done[0] += n
         if on_progress:
             on_progress(min(0.99, done[0] / total), f"{done[0] / 1e6:,.0f} of {total / 1e6:,.0f} MB")
@@ -169,6 +228,8 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
                             raise
                         log_error(f"python download of {c} failed, trying curl")
                         _curl_download(url, out + ".part", progress, cancel)
+                    if upstream.get(c) and _sha256(out + ".part") != upstream[c]:
+                        raise RuntimeError(f"{c} is corrupted (its SHA-256 does not match Hugging Face's)")
                     if not verify(name, c, out + ".part"):
                         if tpl == HF_URL:        # the upstream source: if it changed, that is an update, not an attack
                             log_error(f"{c} from Hugging Face differs from the pinned checksum (upstream updated?); using it")
