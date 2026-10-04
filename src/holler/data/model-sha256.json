@@ -1,0 +1,5 @@
+{
+  "small.en": {"model.bin": "62b2a45b05ee59acb4a5341b33ee35e041395d378d418a18acfe4c9e768ee37a"},
+  "base.en":  {"model.bin": "2a166925539a16005f14ff328359f9b9adb9dc4fb631bb3b227526862e93e2ef"},
+  "small":    {"model.bin": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671"}
+}

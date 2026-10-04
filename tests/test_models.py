@@ -65,6 +65,7 @@ def test_custom_models():
 def test_auto_mirror_after_download():
     out = tempfile.mkdtemp()
     os.environ["HOLLER_MIRROR_DIR"] = out
+    os.environ["HOLLER_SKIP_VERIFY"] = "1"          # fake bytes, real model name
 
     def fake(url, o, progress, cancel):
         open(o, "wb").write(b"x")
@@ -77,10 +78,42 @@ def test_auto_mirror_after_download():
     finally:
         models._py_download = old
         os.environ.pop("HOLLER_MIRROR_DIR")
+        os.environ.pop("HOLLER_SKIP_VERIFY")
     assert os.path.exists(os.path.join(out, "base.en-model.bin")) and os.path.exists(os.path.join(out, "base.en-vocabulary.txt"))
 
 
+def test_checksum_rejects_bad_mirror_and_falls_through():
+    calls = []
+
+    def fake(url, out, progress, cancel):
+        calls.append(url)
+        # Hugging Face "serves" corrupt weights; the release mirror serves the right bytes.
+        data = b"corrupt" if "huggingface" in url else b"good-weights"
+        open(out, "wb").write(data)
+        progress(len(data))
+
+    import hashlib
+    models.expected_sha256 = lambda n, f: hashlib.sha256(b"good-weights").hexdigest() if f == "model.bin" else None
+    old = models._py_download
+    models._py_download = fake
+    try:
+        d = models.download("medium.en")
+    finally:
+        models._py_download = old
+    assert open(os.path.join(d, "model.bin"), "rb").read() == b"good-weights"
+    assert any("releases" in u and u.endswith("medium.en-model.bin") for u in calls)
+
+
+def test_pinned_hashes_present():
+    import importlib
+    importlib.reload(models)
+    for n in ("small.en", "base.en", "small"):
+        assert len(models.expected_sha256(n, "model.bin")) == 64
+
+
 if __name__ == "__main__":
+    test_checksum_rejects_bad_mirror_and_falls_through()
+    test_pinned_hashes_present()
     test_auto_mirror_after_download()
     test_custom_models()
     test_source_order_and_custom_mirror()

@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.4.1
+- Model weights are verified against pinned SHA-256 checksums (`small.en`, `base.en`, `small`); a source that serves different bytes is skipped and the next one is tried. `HOLLER_SKIP_VERIFY=1` turns it off.
 - `mirror_dir` setting: models you download are also copied to that folder, ready for the release mirror.
 - Multilingual `tiny`, `base` and `medium` added to the catalogue (alongside `small`).
 - `holler export-model FOLDER --all` exports every downloaded catalogue model for mirroring.

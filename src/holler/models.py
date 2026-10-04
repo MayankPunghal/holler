@@ -169,6 +169,8 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
                             raise
                         log_error(f"python download of {c} failed, trying curl")
                         _curl_download(url, out + ".part", progress, cancel)
+                    if not verify(name, c, out + ".part"):
+                        raise RuntimeError(f"checksum mismatch for {c} from {url}")
                     os.replace(out + ".part", out)
                     last_err = None
                     break
@@ -201,6 +203,34 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
     if on_progress:
         on_progress(1.0, "done")
     return dest
+
+
+def expected_sha256(name: str, fname: str):
+    """Known SHA-256 of a model file (only the weights, `model.bin`, are pinned), or None."""
+    try:
+        import json
+        from .paths import PACKAGE_DATA
+        with open(os.path.join(PACKAGE_DATA, "model-sha256.json"), encoding="utf-8") as f:
+            return json.load(f).get(name, {}).get(fname)
+    except Exception:
+        return None
+
+
+def _sha256(path: str) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify(name: str, fname: str, path: str) -> bool:
+    """True if the file matches the pinned checksum (or none is pinned, or HOLLER_SKIP_VERIFY=1)."""
+    want = expected_sha256(name, fname)
+    if not want or os.environ.get("HOLLER_SKIP_VERIFY"):
+        return True
+    return _sha256(path) == want
 
 
 def export(name: str, folder: str) -> list[str]:

@@ -46,4 +46,4 @@ holler-gui = "holler.cli:main_gui"
 where = ["src"]
 
 [tool.setuptools.package-data]
-holler = ["data/*.txt"]
+holler = ["data/*.txt", "data/*.json"]
