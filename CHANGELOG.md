@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.1.0 (in development)
-- New default keys: hold **Ctrl+Shift** to dictate, **Ctrl+Shift+Space** to learn a correction. The old Win-key defaults are switched over automatically: Windows opens the Start menu whenever Win is released, and no workaround was reliable.
+- New default keys: hold **Ctrl+`** (Ctrl and the key left of 1) to dictate, **Ctrl+Shift+Space** to learn a correction. The old Win-key defaults are switched over automatically: Windows opens the Start menu whenever Win is released, and no workaround was reliable.
 - Spoken commands (`spoken_commands`): "new line", "new paragraph", "question mark", "open bracket" and more become symbols when they stand on their own or end a clause; a phrase being talked about ("add a new line") is left alone.
 - Smart formatting (`smart_format`): `25%`, `₹500`, `john@example.com` (also from "at the rate", and "my email id is john.example.com" when Whisper drops the "at"), `github.com/holler`, `main.py`.
 - Automatic vocabulary (`auto_vocab`): identifiers you dictate often (3+ times) are added as glossary-only entries. `holler suggest` previews them; `holler try TEXT` shows what a sentence would paste.

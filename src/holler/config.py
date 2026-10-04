@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from .paths import data_dir
 
 DEFAULTS = {
-    "key": "ctrl+shift",         # key or chord to hold while speaking (no Win key: releasing Win opens Start)
+    "key": "ctrl+`",             # key or chord to hold while speaking (Ctrl + the key left of 1; no Win key)
     "hold_ms": 350,              # hold time before recording starts (0 = instantly)
     "teach_key": "ctrl+shift+space",  # learn from the correction on the current line
     "engine": "whisper",         # speech engine (see holler.engines); only whisper is built in for now
@@ -45,7 +45,7 @@ def load() -> dict:
         with open(path(), encoding="utf-8") as f:
             data = json.load(f)
         cfg.update({k: v for k, v in data.items() if k in DEFAULTS})
-        if cfg["key"] == "ctrl+win":                # old default: Windows opens Start when Win is released
+        if cfg["key"] in ("ctrl+win", "ctrl+shift"):   # old defaults: releasing Win opens Start
             cfg["key"] = DEFAULTS["key"]
         if cfg["teach_key"] in ("ctrl+shift+win", "ctrl+alt+t"):      # old default: Ctrl+Alt is AltGr on many layouts and typed a character
             cfg["teach_key"] = DEFAULTS["teach_key"]

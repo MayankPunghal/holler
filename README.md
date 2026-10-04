@@ -58,7 +58,7 @@ py -m pip install holler
 py -m holler
 ```
 
-The first command installs Holler. The second opens the setup wizard, which checks prerequisites, tests your microphone, lets you pick a hotkey and speech model, downloads the model once, and starts Holler in the background. Then hold **Ctrl+Shift**, speak, and release.
+The first command installs Holler. The second opens the setup wizard, which checks prerequisites, tests your microphone, lets you pick a hotkey and speech model, downloads the model once, and starts Holler in the background. Then hold **Ctrl+`** (Ctrl and the key left of 1), speak, and release.
 
 ## Requirements and platform support
 
@@ -131,8 +131,8 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 
 | You do | What happens |
 |---|---|
-| Hold **Ctrl+Shift** for about a third of a second, speak, release | The text is pasted at your cursor |
-| Quick tap, or a shortcut such as Ctrl+Shift+T | Nothing (that's what the hold delay is for) |
+| Hold **Ctrl+`** for about a third of a second, speak, release | The text is pasted at your cursor |
+| Quick tap | Nothing (that's what the hold delay is for) |
 | Press **Esc** while holding | Cancels the recording |
 | Fix a mistake by hand, then press **Ctrl+Shift+Space** | Holler learns the correction |
 | Click the tray icon | Settings, pause, quit |
@@ -171,7 +171,7 @@ Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon
 
 **Punctuation comes from how you speak.** Whisper decides between `.`, `?` and `!` from your wording and intonation, so a question needs a rising tone and a statement a falling one. Short, clearly paced sentences give the best results, and spoken commands give you exact control where it matters.
 
-**Hotkeys.** Any key or chord works: `ctrl+shift`, `f9`, `scroll_lock`, `right_ctrl`. The default `ctrl+shift` uses only modifier keys, so holding it never types anything, and it avoids the Win key (Windows opens the Start menu when Win is released) and Alt (which opens app menus). A shortcut such as Ctrl+Shift+T still works: pressing another key within the first second cancels the recording. Use `holler keys` to see how a key is named.
+**Hotkeys.** Any key or chord works: ``ctrl+` ``, `f9`, `scroll_lock`, `right_ctrl`, `ctrl+shift`. The default ``ctrl+` `` (Ctrl and the key left of 1) does nothing in most apps and avoids the Win key (Windows opens the Start menu when Win is released) and Alt (which opens app menus). Holler can't stop a key reaching the app you're in, so if an app uses your chord (VS Code opens its terminal on Ctrl+`), pick another in Settings. Pressing another key within the first second of a recording cancels it, so shortcuts that share keys with your chord still work. Use `holler keys` to see how a key is named.
 
 ## Teaching it your words
 
@@ -204,7 +204,7 @@ Most settings are in the **Settings** window (open it with `py -m holler`). Ever
 
 | Key | Default | Meaning |
 |---|---|---|
-| `key` | `ctrl+shift` | Key or chord to hold while speaking |
+| `key` | ``ctrl+` `` | Key or chord to hold while speaking |
 | `hold_ms` | `350` | Hold time before recording starts (0 = instantly) |
 | `teach_key` | `ctrl+shift+space` | Chord that learns from the correction on the current line |
 | `engine` | `whisper` | Speech engine: `whisper`, or `parakeet` (optional extra) |
@@ -369,7 +369,7 @@ Report vulnerabilities as described in [SECURITY.md](https://github.com/MayankPu
 - **`holler` is not recognised.** Use `py -m holler`.
 - **The hotkey doesn't work in some app.** Choose a different chord in Settings. If the app runs as Administrator, run Holler as Administrator too.
 - **The hotkey stops responding after a while, or the tray icon disappears.** Holler restarts itself if it crashes, renews its keyboard hook every 15 minutes and after sleep, and reopens the microphone if it stops delivering audio. If it still happens, send `holler.log` and `crash.log` from the data folder (`holler where`) in an issue. The hotkey also can't see keys typed into a window that runs as Administrator unless Holler does too, and it ignores keystrokes injected by software (so a key remapped by a tool such as AutoHotkey won't trigger it).
-- **The Start menu opens when I dictate.** You are using a chord with the Win key (the default before 1.1). Windows opens Start whenever Win is released, so Holler no longer uses it by default; pick another key in Settings, such as `ctrl+shift`.
+- **The Start menu opens when I dictate.** You are using a chord with the Win key (the default before 1.1). Windows opens Start whenever Win is released, so Holler no longer uses it by default; pick another key in Settings, such as ``ctrl+` ``.
 - **A letter is typed when I use a chord.** Your layout treats that combination as a character (Ctrl+Alt is AltGr on many layouts). Use a modifier-only chord such as `ctrl+shift`.
 - **Nothing is pasted.** Try `paste: "type"` for apps that block paste, or `ctrl+shift+v` for Linux terminals.
 - **The pill doesn't show over some app.** Known issue: windows that pin themselves to the top (such as Claude Desktop on some setups) can hide it. Dictation still works.

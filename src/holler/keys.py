@@ -17,7 +17,25 @@ GROUPS = {
     "shift": _group("shift", "shift_l", "shift_r"),
     "win": _group("cmd", "cmd_l", "cmd_r"),
 }
-ALIASES = {"control": "ctrl", "cmd": "win", "windows": "win", "super": "win", "option": "alt"}
+ALIASES = {"control": "ctrl", "cmd": "win", "windows": "win", "super": "win", "option": "alt",
+           "backtick": "`", "grave": "`", "tilde": "`"}
+
+# US-layout punctuation keys by Windows virtual-key code: with Ctrl held, Windows reports no character for them
+_OEM_CHARS = {0xC0: "`", 0xBD: "-", 0xBB: "=", 0xDB: "[", 0xDD: "]", 0xDC: "\\", 0xBA: ";", 0xDE: "'",
+              0xBC: ",", 0xBE: ".", 0xBF: "/"}
+
+
+def _oem_char(vk):
+    import sys
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            c = ctypes.windll.user32.MapVirtualKeyW(vk, 2) & 0x7FFF      # MAPVK_VK_TO_CHAR, layout-aware
+            if c:
+                return chr(c).lower()
+        except Exception:
+            pass
+    return _OEM_CHARS.get(vk)
 
 
 def key_id(key):
@@ -30,6 +48,10 @@ def key_id(key):
         vk = getattr(key, "vk", None)
         if vk and 48 <= vk <= 90:
             return chr(vk).lower()
+        if vk:
+            ch = _oem_char(vk)
+            if ch:
+                return ch
         return vk
     return key
 
