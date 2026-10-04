@@ -70,7 +70,7 @@ def test_run_ranks_models():
 
     import holler.engines as E
     old = E.make_engine
-    E.make_engine = lambda engine, model, beam=2: Fake(model, beam)
+    E.make_engine = lambda engine, model, beam=2, prompt="": Fake(model, beam)
     try:
         res = bench.run(d, ["good", "bad"], pipeline=False, say=lambda *a: None)
     finally:
@@ -81,6 +81,76 @@ def test_run_ranks_models():
     assert text.index("good") < text.index("bad")                  # best model listed first
     assert by["bad"]["worst"] and "path" not in text
     assert os.path.exists(bench.save_results(d, res))
+
+
+def test_variant_specs_and_prompt_reach_the_engine():
+    seen = []
+    from holler import models
+    models.is_downloaded = lambda n: True                      # no downloads in tests
+
+    class Spy:
+        supports_hotwords = True
+
+        def __init__(self, model, beam, prompt):
+            seen.append(("init", model, prompt))
+
+        def __call__(self, audio, lang, keywords):
+            seen.append(("call", lang))
+            return "x", lang or "auto"
+
+        def unload(self):
+            pass
+
+    d = tempfile.mkdtemp()
+    bench.save_wav(os.path.join(d, "01.wav"), np.zeros(16000, dtype=np.float32))
+    open(os.path.join(d, "01.txt"), "w").write("x")
+    import holler.engines as E
+    old = E.make_engine
+    E.make_engine = lambda engine, model, beam=2, prompt="": Spy(model, beam, prompt)
+    try:
+        bench.run(d, ["small", "small@en+hing", "small@hi"], pipeline=False, say=lambda *a: None)
+    finally:
+        E.make_engine = old
+    assert ("init", "small", "") in seen and ("init", "small", bench.HINGLISH_PROMPT) in seen
+    assert [s for s in seen if s[0] == "call"] == [("call", None), ("call", "en"), ("call", "hi")]
+    assert len(bench.HINGLISH_PROMPTS) == 12 and bench.default_folder("hinglish").endswith("bench-set-hinglish")
+
+
+def test_whisper_engine_initial_prompt_and_echo_filter():
+    got = {"reply": ""}
+    fw = types.ModuleType("faster_whisper")
+
+    class Seg:
+        def __init__(self, text):
+            self.text = text
+
+    class WM:
+        def __init__(self, *a, **k):
+            pass
+
+        def transcribe(self, audio, **kw):
+            got.update(kw)
+            return iter([Seg(got["reply"])]), types.SimpleNamespace(language="hi")
+
+    fw.WhisperModel = WM
+    sys.modules["faster_whisper"] = fw
+    from holler import models
+    models.is_downloaded = lambda n: True
+    from holler.engines.whisper import WhisperEngine
+    try:
+        eng = WhisperEngine("small", 2, initial_prompt="Haan bhai, main kal office aaunga.")
+        got["reply"] = "Kal meeting hai"
+        text, lang = eng(np.zeros(16000 * 3, dtype=np.float32), None, None)
+        assert text == "Kal meeting hai" and got["initial_prompt"].startswith("Haan bhai") and lang == "hi"
+        got["reply"] = "Haan bhai, main kal office aaunga."          # the model echoing the prompt back
+        assert eng(np.zeros(16000, dtype=np.float32), None, None)[0] == ""
+        plain = WhisperEngine("small", 2)
+        got.pop("initial_prompt", None)
+        got["reply"] = "hello"
+        plain(np.zeros(16000, dtype=np.float32), None, None)
+        assert "initial_prompt" not in got
+    finally:
+        del sys.modules["faster_whisper"]
 
 
 def test_parakeet_engine_with_fake_onnx_asr():
@@ -125,6 +195,8 @@ def test_parakeet_missing_dependency_message():
 
 
 if __name__ == "__main__":
+    test_variant_specs_and_prompt_reach_the_engine()
+    test_whisper_engine_initial_prompt_and_echo_filter()
     test_parakeet_engine_with_fake_onnx_asr()
     test_parakeet_missing_dependency_message()
     for t in (test_wer, test_wav_roundtrip_and_load_set, test_registry, test_run_ranks_models):

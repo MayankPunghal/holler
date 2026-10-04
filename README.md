@@ -117,6 +117,22 @@ Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, an
 - **Model download blocked by your network.** Holler retries with Windows' own `curl.exe` and, as a last resort, shows the files to download by hand. See *If Hugging Face is unavailable* below.
 - **Problems are logged** to `errors.log` in the data folder.
 
+## Hinglish and Hindi
+
+Use a **multilingual** model (`small`, `medium`; the `.en` models are English only). Whisper decides how to write Hindi words: left on automatic it may output Devanagari, or force Hindi words into odd English spellings. Two settings steer it:
+
+- `lang`: `en`, `hi`, or empty for automatic (Settings > Language).
+- `initial_prompt`: a short Roman-script sample such as `Haan bhai, main kal office aaunga. Meeting ke baad call kar lena, theek hai?`. It nudges Whisper to write Hindi in English letters.
+
+Which combination works best depends on your voice, so measure it:
+
+```
+py -m holler bench record --set hinglish
+py -m holler bench run --set hinglish --models small,small@en+hing,small@hi,medium@en+hing
+```
+
+(`@en` / `@hi` sets the language, `+hing` adds the built-in Roman-Hinglish prompt.) Hinglish spelling varies a lot (`nahi` / `nahin`), so compare models against each other rather than reading the percentage as an absolute score. India-focused fine-tunes such as [Oriserve's Hindi2Hinglish](https://github.com/OriserveAI/Whisper-Hindi2Hinglish) exist, but they are large and not in the CTranslate2 format Holler loads, so they need converting first (see *Using your own model*).
+
 ## Other engines (optional)
 
 Whisper is built in. NVIDIA's Parakeet TDT is available as an extra: `py -m pip install "holler[parakeet]"`, then pick **parakeet** under *Settings > Speech engine*. It is fast on CPU and does not invent text during silence, but it can't take hotwords, so rely on your replacement rules. It is **new and untested on Indian-accented English**: run `holler bench` first and see which wins on your voice. Moonshine and Qwen3-ASR are candidates for later.

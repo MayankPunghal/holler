@@ -17,10 +17,10 @@ ENGINES = {
 DEFAULT_MODELS = {"whisper": "small.en", "parakeet": "nemo-parakeet-tdt-0.6b-v3"}
 
 
-def make_engine(engine: str, model: str, beam: int = 2):
+def make_engine(engine: str, model: str, beam: int = 2, initial_prompt: str = ""):
     try:
         target = ENGINES[engine]
     except KeyError:
         raise ValueError(f"Unknown engine {engine!r}. Available: {', '.join(ENGINES)}") from None
     mod, cls = target.split(":")
-    return getattr(importlib.import_module(mod), cls)(model, beam)
+    return getattr(importlib.import_module(mod), cls)(model, beam, initial_prompt)

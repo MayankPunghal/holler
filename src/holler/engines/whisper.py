@@ -14,8 +14,9 @@ class WhisperEngine:
     """Local Whisper through faster-whisper (CTranslate2, int8 on CPU). The model can be unloaded when idle
     (frees ~300 MB) and is re-loaded in the background while you are still speaking."""
 
-    def __init__(self, model: str, beam: int):
+    def __init__(self, model: str, beam: int, initial_prompt: str = ""):
         self.name, self.beam = model, beam
+        self.initial_prompt = (initial_prompt or "").strip()
         base = os.path.basename(model.rstrip("/\\")).lower()
         self.english_only = ".en" in base or base.endswith("-en")
         self.m = None
@@ -50,6 +51,8 @@ class WhisperEngine:
         kwargs = {}
         if keywords:
             kwargs["hotwords"] = ", ".join(keywords)
+        if self.initial_prompt:
+            kwargs["initial_prompt"] = self.initial_prompt
         segs, info = self.m.transcribe(
             audio,
             language=("en" if self.english_only else lang),
@@ -65,6 +68,8 @@ class WhisperEngine:
         low = text.lower().strip(" .!,")
         if len(audio) < TARGET_SR * 2 and low in HALLUCINATIONS:
             text = ""  # Whisper sometimes invents "Thank you." out of near-silence
+        elif self.initial_prompt and len(low) > 3 and low in self.initial_prompt.lower():
+            text = ""  # ... or repeats the style prompt back
         elif keywords and low in {k.lower() for k in keywords}:
             text = ""  # ... or echoes its own glossary back
         return text, info.language

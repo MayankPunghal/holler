@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0
+- Hinglish and Hindi: new `initial_prompt` setting (Whisper) to steer output into Roman script, plus a 12-sentence Hinglish bench set (`holler bench record --set hinglish`).
+- `holler bench` variants: `small@en+hing` = model `small`, language en, with the Roman-Hinglish prompt (`@hi`, `@en`, `+hing` can be mixed per model).
+
 ## 0.6.1
 - `holler bench`: identifiers like `customerOrderId` are compared as the words they are spoken as; example results added to the README.
 - CI now runs the tests on Windows as well as Linux.

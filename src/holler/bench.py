@@ -44,6 +44,25 @@ PROMPTS = [
 ]
 
 
+HINGLISH_PROMPTS = [
+    "Kal subah meeting hai, isliye aaj raat tak report bhej dena.",
+    "Yaar, ye bug production mein kaise aa gaya, kisi ne test nahi kiya kya?",
+    "Main abhi office se nikal raha hoon, thodi der mein call karta hoon.",
+    "Server down ho gaya hai, pehle logs check karo phir restart karna.",
+    "Mujhe lagta hai ki hum PostgreSQL use karein, SQL Server bahut mehenga hai.",
+    "Aaj ka deployment successful raha, ab client ko email bhej do.",
+    "Tum kal Mumbai jaa rahe ho kya, ya meeting online hogi?",
+    "Ye function ko refactor karna padega, abhi bahut messy code hai.",
+    "Chai peene chalte hain, uske baad hum sprint planning karenge.",
+    "Mera laptop bahut slow chal raha hai, shayad RAM kam pad rahi hai.",
+    "Pull request merge karne se pehle ek baar review kar lena please.",
+    "Bhai, kal Tuesday ko call rakhte hain, haan, Wednesday ko, Tuesday nahi.",
+]
+# A Roman-script style hint: it nudges Whisper to write Hindi words in English letters instead of Devanagari.
+HINGLISH_PROMPT = ("Haan bhai, main kal office aaunga. Meeting ke baad call kar lena, theek hai? "
+                   "Abhi deploy kar do aur logs check karo.")
+
+
 # ------------------------------------------------------------------ scoring
 _ONES = ("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen "
          "seventeen eighteen nineteen").split()
@@ -97,8 +116,8 @@ def wer(ref: str, hyp: str) -> tuple[int, int]:
 
 
 # ------------------------------------------------------------------ clips
-def default_folder() -> str:
-    return os.path.join(data_dir(), "bench-set")
+def default_folder(kind: str = "english") -> str:
+    return os.path.join(data_dir(), "bench-set" if kind == "english" else f"bench-set-{kind}")
 
 
 def save_wav(path: str, audio: np.ndarray):
@@ -193,21 +212,26 @@ def run(folder: str, model_names: list[str], engine: str = "whisper", beam: int 
     results = []
     for spec in model_names:
         from .engines import ENGINES
-        head, _, tail = spec.partition(":")                # "parakeet:nemo-parakeet-tdt-0.6b-v3", or just "small.en"
-        eng_name, name = (head, tail) if head in ENGINES else (engine, spec)       # (a path like C:\\models has a colon too)
+        # spec = [engine:]model[@lang][+hing]   e.g. small, small@en+hing, parakeet:nemo-parakeet-tdt-0.6b-v3
+        body, plus, flag = spec.partition("+")
+        body, at, lang = body.partition("@")
+        head, _, tail = body.partition(":")
+        eng_name, name = (head, tail) if head in ENGINES else (engine, body)         # (a path like C:\\models has a colon too)
+        prompt = HINGLISH_PROMPT if flag == "hing" else ""
+        lang = lang or None
         say(f"\n== {spec}")
         if eng_name == "whisper" and name in models.MODELS and not models.is_downloaded(name):
             say("   downloading...")
             models.download(name, on_progress=lambda f, t: None)
         t0 = time.time()
-        eng = make_engine(eng_name, name, beam)
+        eng = make_engine(eng_name, name, beam, prompt)
         load_s = time.time() - t0
         errs = words = 0
         elapsed = 0.0
         worst = []
         for clip, audio, ref in clips:
             t1 = time.time()
-            text, _ = eng(audio, None, keywords if getattr(eng, "supports_hotwords", True) else None)
+            text, _ = eng(audio, lang, keywords if getattr(eng, "supports_hotwords", True) else None)
             elapsed += time.time() - t1
             if pipeline:
                 text = vocab.apply(text)

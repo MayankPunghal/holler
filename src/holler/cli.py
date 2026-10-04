@@ -55,8 +55,9 @@ def build_parser():
     ex.add_argument("--all", action="store_true", help="export every downloaded catalogue model")
     bn = sub.add_parser("bench", help="compare speech models on your own voice (record, then run)")
     bn.add_argument("action", choices=["record", "run"])
+    bn.add_argument("--set", dest="kind", choices=["english", "hinglish"], default="english", help="which sentences to use")
     bn.add_argument("folder", nargs="?", default=None, help="clips folder (default: bench-set in the data folder)")
-    bn.add_argument("--models", default=None, help="comma-separated, e.g. small.en,base.en,parakeet:nemo-parakeet-tdt-0.6b-v3 (default: your setting)")
+    bn.add_argument("--models", default=None, help="comma-separated, e.g. small.en,base.en,parakeet:nemo-parakeet-tdt-0.6b-v3. Suffix @hi / @en sets the language, +hing adds the Roman-Hinglish prompt: small@en+hing")
     bn.add_argument("--engine", default="whisper")
     bn.add_argument("--no-hotwords", action="store_true", help="do not give Whisper your vocabulary")
     bn.add_argument("--raw", action="store_true", help="score the raw transcript (skip vocabulary fixes and cleanup)")
@@ -171,9 +172,9 @@ def main(argv=None) -> int:
                 print(f)
     elif cmd == "bench":
         from . import bench
-        folder = ns.folder or bench.default_folder()
+        folder = ns.folder or bench.default_folder(ns.kind)
         if ns.action == "record":
-            return bench.record(folder, config.load()["device"])
+            return bench.record(folder, config.load()["device"], bench.HINGLISH_PROMPTS if ns.kind == "hinglish" else None)
         names = [m.strip() for m in (ns.models or config.load()["model"]).split(",") if m.strip()]
         results = bench.run(folder, names, engine=ns.engine, hotwords=not ns.no_hotwords, pipeline=not ns.raw)
         print("\n" + bench.table(results))

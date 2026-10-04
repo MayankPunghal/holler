@@ -16,6 +16,7 @@ DEFAULTS = {
     "model_url": "",             # optional mirror for model downloads (see README); HOLLER_MODEL_URL also works
     "mirror_dir": "",            # optional: copy every downloaded model here, named for re-hosting (see README)
     "unload_after": 10,          # idle minutes before the model's memory is freed (0 = never)
+    "initial_prompt": "",        # Whisper only: a style hint, e.g. Roman Hinglish (see README, "Hinglish and Hindi")
     "lang": None,                # None = auto (English-only models always use English)
     "device": None,              # microphone: None = system default, else the device name
     "paste": "ctrl+v",           # ctrl+v | ctrl+shift+v | type

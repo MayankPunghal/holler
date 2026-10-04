@@ -17,7 +17,7 @@ class ParakeetEngine:
     name = "parakeet"
     supports_hotwords = False
 
-    def __init__(self, model: str, beam: int = 2):
+    def __init__(self, model: str, beam: int = 2, initial_prompt: str = ""):
         # a Whisper name left over in the settings (e.g. small.en) means "use the default Parakeet model"
         self.model_name = model if model.startswith(("nemo-", "t-tech/", "gigaam")) else DEFAULT_MODEL
         self.m = None

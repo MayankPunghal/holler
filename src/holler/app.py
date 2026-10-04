@@ -44,7 +44,7 @@ class App:
         a = self.cfg
         try:
             self.overlay.set("loading")
-            self.engine = make_engine(a.engine, a.model, a.beam)
+            self.engine = make_engine(a.engine, a.model, a.beam, a.initial_prompt)
             if self.download_only:
                 print("Model ready.", flush=True)
                 os._exit(0)
