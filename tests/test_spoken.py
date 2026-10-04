@@ -55,7 +55,7 @@ check("undo phrase must be alone", is_undo("scratch that and write it again"), F
 d = tempfile.mkdtemp()
 log = os.path.join(d, "log.tsv")
 with open(log, "w", encoding="utf-8") as f:
-    for i in range(4):
+    for i in range(5):
         f.write(f"t\traw\tWe deploy with Zorbify and use order_id here {i}.\n")
     f.write("t\traw\tOnce we saw Quuxer here.\n")
 got = dict(suggest(log, ["kubernetes"]))
