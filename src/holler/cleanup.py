@@ -30,6 +30,7 @@ WEAK_CUES = ["sorry", "i mean", "wait wait", "no no", "okay wait", "ok wait", "o
              "hold on", "wait"]
 
 SCRATCH = {"scratch that", "strike that", "undo that"}
+LEAD_INS = {"actually", "no", "oh", "sorry", "wait", "okay", "ok", "so", "um", "uh", "hmm", "oops"}
 LITERAL_BEFORE = {"say", "says", "said", "saying", "phrase", "word", "words", "keyword", "keywords", "command",
                   "type", "typed", "write", "wrote"}
 STOP1 = {"the", "a", "an", "to", "of", "in", "on", "at", "for", "and", "or", "but", "is", "it", "i", "we", "you",
@@ -201,6 +202,16 @@ def resolve_corrections(tokens):
                     and _norm(post[0]) == _norm(old_w):
                 post = list(post)
                 post[0] = post[0][0].lower() + post[0][1:]
+        elif cue in SCRATCH:      # "my email is X, actually scratch that, it's Y": drop the phrase before the cue
+            lead = list(pre)
+            while lead and _norm(lead[-1]) in LEAD_INS:
+                lead.pop()                                  # "..., actually / oh / sorry, scratch that"
+            kept = lead[: _clause_start(lead)] if lead else []
+            post = list(post)
+            if kept and post and kept[-1][-1:] not in ".?!" and post[0][:1].isupper() and _norm(post[0]) not in PRONOUN_I:
+                post[0] = post[0][0].lower() + post[0][1:]
+            tokens, scan = kept + post, len(kept)              # keep the comma: "My name is Mayank, it's ..."
+            continue
         elif strong:
             j = _shape_anchor(pre, post)
             if j is not None:

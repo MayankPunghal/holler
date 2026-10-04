@@ -11,7 +11,7 @@
 **Added**
 - Undo by voice (`voice_undo`): "scratch that", "undo that", "delete that" and similar, said as a dictation on its own, remove the last dictation. It refuses if you typed, clicked or switched windows since the paste, so it never deletes the wrong text. Talking about the phrase ("say scratch that") is left as text.
 - Spoken commands (`spoken_commands`, on by default): "new line", "new paragraph", "question mark", "exclamation (mark)", "full stop", "comma", "colon", "open/close bracket", "open/close quote" and more become symbols when said on their own or at the end of a clause. A phrase being talked about ("add a new line", "I said new paragraph") is left alone.
-- Smart formatting (`smart_format`, on by default): "twenty five percent" → `25%`, "five hundred rupees" → `₹500`, "john at example dot com" or "john at the rate example dot com" → `john@example.com`, "github dot com slash holler" → `github.com/holler`, "main dot py" → `main.py`. Email addresses that Whisper writes oddly (`johnatexample.com`, `emailidjohnatexample.com`, `john.threadexample.com`, or `john.example.com` after "my email id is") are repaired, for any domain ending.
+- Smart formatting (`smart_format`, on by default): "twenty five percent" → `25%`, "five hundred rupees" → `₹500`, "john at example dot com" or "john at the rate example dot com" → `john@example.com`, "github dot com slash holler" → `github.com/holler`, "main dot py" → `main.py`. Email addresses that Whisper writes oddly (`johnatexample.com`, `emailidjohnatexample.com`, `john.threadexample.com`, `mayank at theredgmail.com`, or `john.example.com` after "my email id is") are repaired, for any domain ending.
 - Learning a correction works on a selected fragment, on a wrapped line holding several dictations, and for any of the last 10 dictations.
 - Safer learning: a swap between two ordinary words ("generally" → "genuinely") is never applied to the bare word, only inside a phrase seen in two different dictations; the same fix taught twice in one dictation counts once; correcting a word back removes the earlier rule. Ordinary words are recognised with the speech model's own tokenizer.
 - Starter vocabulary packs (web, cloud-devops, dotnet, python-data, general-tech), merged once into your vocabulary. `holler packs` lists them; `holler import --pack NAME` adds one again.
@@ -21,6 +21,8 @@
 - Changelog link on the PyPI page.
 
 **Fixed**
+- A dictation containing ₹ or Hindi text could be lost: printing it to the log failed on Windows' default encoding.
+- "…, actually scratch that, …" drops the whole phrase before it, so "my email is X, actually scratch that, it's Y" keeps only Y.
 - Model downloads: only one download per model at a time (two at once could write a file of the right size with the wrong bytes), every downloaded file is checked against the SHA-256 that Hugging Face publishes, and the progress bar never moves backwards.
 - Settings: the model list shows only the selected engine's models, the General tab scrolls and Save is always visible on small screens, and About shows the author and licence.
 - Holler runs under a small supervisor that restarts it if it crashes. Output is written to `holler.log` and hard crashes to `crash.log` in the data folder.

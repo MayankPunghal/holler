@@ -133,7 +133,7 @@ def supervise(cmd=None, max_crashes: int = 5, window: float = 120.0, delay: floa
     except OSError:
         pass
     cmd = cmd or [sys.executable, "-m", "holler", "run"]
-    env = dict(os.environ, HOLLER_SUPERVISED="1", PYTHONUNBUFFERED="1")
+    env = dict(os.environ, HOLLER_SUPERVISED="1", PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8")
     crashes = []
     while True:
         kw = {"stdin": subprocess.DEVNULL, "stdout": logf or subprocess.DEVNULL, "stderr": subprocess.STDOUT if logf else subprocess.DEVNULL, "env": env}

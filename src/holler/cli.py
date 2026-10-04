@@ -135,6 +135,11 @@ def cmd_keys():
 
 
 def main(argv=None) -> int:
+    for stream in (sys.stdout, sys.stderr):              # never crash printing a "₹" or a Hindi word
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ns = build_parser().parse_args(sys.argv[1:] if argv is None else list(argv))
     cmd = ns.cmd or "open"
     if cmd == "open":

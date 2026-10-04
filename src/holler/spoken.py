@@ -269,10 +269,11 @@ _MAIL_WORDS = {"email", "e-mail", "mail", "send", "sent", "contact", "cc", "bcc"
 
 
 def _at_domain(m, text):
-    before = text[: m.start()].lower().split()[-5:]
+    before = text[: m.start()].lower().split()[-12:]       # "my email id is X, actually it's Y at ..."
     local = m.group(1)
-    if any(w.strip(",.") in _MAIL_WORDS for w in before) or re.search(r"[0-9_.+]", local):
-        return f"{local}@{m.group(2)}".lower()
+    said_rate = _strip_rate(m.group(2)) != m.group(2)       # "at the rate" heard inside the domain: an address
+    if said_rate or any(w.strip(",.") in _MAIL_WORDS for w in before) or re.search(r"[0-9_.+]", local):
+        return f"{local}@{_strip_rate(m.group(2))}".lower()
     return m.group(0)
 
 
@@ -290,18 +291,27 @@ def _strip_id_words(local: str) -> str:
     return local
 
 
+def _near(a: str, b: str) -> bool:
+    """a is b with at most two letters changed, added or dropped ('thered', 'thread', 'therat' ~ 'therate')."""
+    import difflib
+    return abs(len(a) - len(b)) <= 2 and difflib.SequenceMatcher(None, a, b).ratio() >= 0.75
+
+
 def _strip_rate(domain: str) -> str:
-    """'at the rate' heard as part of the domain: 'threadexample.com', 'therateexample.com' -> 'example.com'."""
-    low = domain.lower()
-    for w in ("attherate", "therate", "thread", "atrate"):
-        if low.startswith(w) and "." in domain[len(w):] and len(domain[len(w):].split(".")[0]) >= 3:
-            return domain[len(w):]
+    """'at the rate' heard as the start of the domain ('threadexample.com', 'theredgmail.com', 'therategmail.com')
+    -> 'example.com'. Only used where an address is certain, so a real domain is never touched elsewhere."""
+    label, rest = domain.split(".", 1) if "." in domain else (domain, "")
+    low = label.lower()
+    for cut in range(len(low) - 3, 3, -1):                # the longest prefix that sounds like "(at) the rate"
+        head = low[:cut]
+        if _near(head, "therate") or _near(head, "attherate") or head in ("thread", "atrate"):
+            return label[cut:] + ("." + rest if rest else "")
     return domain
 
 
 def _fused(m, text):
     """Whisper often writes a spoken address as one word: 'johnatexample.com'. Split it only in an email context."""
-    before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-4:]]
+    before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-12:]]
     if not any(w in _FUSE_CONTEXT for w in before) or len(re.findall("at", m.group(0), re.I)) != 1:
         return m.group(0)
     return f"{_strip_id_words(m.group(1))}@{_strip_rate(m.group(2))}".lower()
@@ -313,7 +323,7 @@ _ID_CONTEXT = {"email", "e-mail", "mail", "id", "address"}
 
 def _dotted(m, text):
     """'my email id is john.example.com': Whisper dropped the 'at'. Only right after email words."""
-    before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-4:]]
+    before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-12:]]
     if "@" in text[max(0, m.start() - 1): m.end() + 1] or not any(w in _ID_CONTEXT for w in before):
         return m.group(0)
     return f"{_strip_id_words(m.group(1))}@{_strip_rate(m.group(2))}".lower()

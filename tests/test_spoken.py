@@ -62,6 +62,8 @@ check("any email ending", full("Mail me at priya at the rate startup dot xyz tod
 check("any ending, glued", full("Send it to raviatcompany.tech please"), "Send it to ravi@company.tech please")
 check("any ending, 'at the rate' heard as thread", full("My email id is john.threadacme.co.in"), "My email id is john@acme.co.in")
 check("'the dot product' untouched", full("Compute the dot product of two vectors"), "Compute the dot product of two vectors")
+check("'at the rate' heard as 'thered'", full("My email id is mayank at theredgmail.com"), "My email id is mayank@gmail.com")
+check("correction later in the sentence", full("my email id is ravi at the rate gmail dot com, actually it's ravi kumar at theredgmail.com"), "my email id is ravi@gmail.com, actually it's ravi kumar@gmail.com")
 check("fused address outside email context", full("Visit whatever.com today"), "Visit whatever.com today")
 
 d = tempfile.mkdtemp()

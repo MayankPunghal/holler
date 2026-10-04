@@ -9,6 +9,7 @@ CASES = [
     ("Send the report to John scratch that send it to Priya", "Send it to Priya"),
     ("This is line one. Line No. 2, scratch that.", "This is line one."),
     ("To undo, say scratch that on its own.", "To undo, say scratch that on its own."),
+    ("My name is Mayank, my email id is a at b, actually scratch that, it's c at d.", "My name is Mayank, it's c at d."),
     ("This is line one. Hey, this is line 2, undo that.", "This is line one."),
     ("The keyword scratch that removes the line.", "The keyword scratch that removes the line."),
     ("OK, so scratch that.", ""),
