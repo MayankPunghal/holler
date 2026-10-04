@@ -181,7 +181,12 @@ Whisper itself doesn't learn, so Holler learns the words around it, three ways:
 2. **Correct, then press Ctrl+Shift+L.** Fix the wrong word by hand, select the corrected words (or just leave the cursor on that line), and press Ctrl+Shift+L. It works for any of your last 10 dictations. Holler compares what it pasted with your fix and remembers it.
 3. **History tab.** Pick a past dictation, fix the text and click *Learn*.
 
-A fix that includes a neighbouring word ("null difference" → "null reference") is learned immediately. A fix to a single ordinary word is learned after you correct it twice, so one odd correction can't break a normal word everywhere.
+Learning is careful, because a learned fix rewrites every future dictation:
+
+- **Names, jargon and garbled words** ("Mach" → `Moq`, "Itrobed" → "It wrote") are learned with the word next to them at once, and on their own after you make the same fix in a second dictation.
+- **Two ordinary words** ("generally" ↔ "genuinely") are a mis-hearing, not a spelling. Holler never replaces one with the other everywhere. It only learns the fix inside a phrase ("really generally" → "really genuinely"), and only after the same fix in two different dictations.
+- **Fixing it back undoes it.** If you correct a word back to what it was, the earlier rule is removed.
+- Pressing the learn key twice on the same fix counts once. Every learned rule is listed in Settings > Vocabulary, where you can delete it.
 
 **It also improves by itself.**
 - **Automatic vocabulary.** Every 20 dictations (and at start-up) Holler looks at your local history for identifiers you dictate three or more times (mixed case, digits or underscores, such as `xUnit` or `order_id`) that your vocabulary lacks, and adds them as glossary-only entries (`~Name`), which steer the speech engine but never rewrite your text. At most 60 are added this way. Turn it off with `auto_vocab: false`. `holler suggest` shows what it would pick without adding anything.

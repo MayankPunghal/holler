@@ -53,6 +53,9 @@ class App:
         try:
             self.overlay.set("loading")
             self.engine = make_engine(a.engine, a.model, a.beam, a.initial_prompt)
+            tok = os.path.join(models.model_dir(a.model), "tokenizer.json")
+            if a.engine == "whisper" and os.path.exists(tok):
+                self.vocab.load_common_words(tok)      # tells ordinary words from names/jargon when learning
             if self.download_only:
                 print("Model ready.", flush=True)
                 os._exit(0)

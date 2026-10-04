@@ -11,6 +11,7 @@ Files (next to this script, plain text, safe to edit by hand; changes are picked
   replacements_pending.json   single-word corrections seen once, waiting for a second confirmation.
 """
 import difflib
+import hashlib
 import json
 import os
 import re
@@ -18,6 +19,9 @@ import shutil
 import threading
 
 from .cleanup import STOP1
+
+PRONOUNS = {"i'm", "i've", "i'll", "i'd", "you're", "we're", "they're", "he's", "she's", "it's", "that's",
+            "there's", "let's", "he", "she", "they", "them", "me", "us", "him", "her", "its", "our", "your"}
 
 EDGE = ".,;:!?\"'()[]{}"
 
@@ -260,38 +264,98 @@ class Vocab:
         except (OSError, ValueError):
             return {}
 
-    def learn(self, wrong: str, right: str, before: str = "", after: str = "") -> str:
-        """Record one correction. Returns a short human-readable result."""
+    # ---- what counts as an ordinary word
+    common = None          # set of ordinary words (from the speech model's tokenizer), or None if unknown
+
+    def load_common_words(self, tokenizer_json: str) -> bool:
+        """Ordinary English words are single tokens in Whisper's tokenizer ("generally", "Mach"); names, jargon
+        and mis-hearings are not ("Moq", "Kubernetes", "Itrobed")."""
+        try:
+            with open(tokenizer_json, encoding="utf-8") as f:
+                vocab = json.load(f)["model"]["vocab"]
+            self.common = {k[1:] for k in vocab if k.startswith("\u0120") and k[1:].isalpha()}
+            return True
+        except (OSError, ValueError, KeyError, TypeError):
+            return False
+
+    def is_common(self, word: str) -> bool:
+        w = word.strip(EDGE)
+        if self.common is not None:
+            return w in self.common or w.lower() in self.common
+        return bool(re.fullmatch(r"[a-z']+", w))          # unknown tokenizer: plain lower-case words
+
+    def _confirmations(self, key: str, source: str) -> int:
+        """Count a correction once per dictation (pressing the learn key twice on one fix is one confirmation)."""
+        p = self._pending()
+        seen = p.get(key, [])
+        if not isinstance(seen, list):
+            seen = [f"legacy{i}" for i in range(int(seen))]
+        src = hashlib.sha1(source.strip().lower().encode()).hexdigest()[:12] if source else f"t{len(seen)}"
+        if src not in seen:
+            seen.append(src)
+        p[key] = seen
+        with open(self.pending_path, "w", encoding="utf-8") as f:
+            json.dump(p, f, indent=1)
+        return len(seen)
+
+    def _forget_pending(self, key):
+        p = self._pending()
+        if p.pop(key, None) is not None:
+            with open(self.pending_path, "w", encoding="utf-8") as f:
+                json.dump(p, f, indent=1)
+
+    def learn(self, wrong: str, right: str, before: str = "", after: str = "", source: str = "") -> str:
+        """Record one correction. Returns a short human-readable result.
+
+        Safety rules, because a replacement rule rewrites every future dictation:
+        - correcting back undoes an earlier rule (genuinely -> generally removes generally -> genuinely);
+        - if both sides are ordinary words ("generally" / "genuinely"), it is a mis-hearing that depends on how
+          the words were said, not a spelling to enforce: no rule is made from a single word, only a phrase with
+          a meaningful neighbouring word, and only after the same fix in two different dictations;
+        - otherwise (a name, jargon, a garbled word) the phrase is learned at once and the bare word after the
+          same fix in two different dictations."""
         wrong, right = wrong.strip(), right.strip()
         with self.lock:
+            rules = self.rule_list()
+            undo = [(w, r) for w, r in rules
+                    if (w.lower() == right.lower() and r.lower() == wrong.lower())
+                    or (w.lower().endswith(" " + right.lower()) and r.lower().endswith(" " + wrong.lower()))
+                    or (w.lower().startswith(right.lower() + " ") and r.lower().startswith(wrong.lower() + " "))]
+            if undo:
+                self.set_rules([x for x in rules if x not in undo])
+                self._forget_pending(f"{right.lower()} => {wrong}")
+                return "removed earlier rule: " + ", ".join(f"{w} -> {r}" for w, r in undo)
             if any(w == len(wrong) and rx.fullmatch(wrong) and r == right for w, rx, r in self.rules):
                 return f"already known: {wrong} -> {right}"
+            ordinary = all(self.is_common(x) for x in (wrong + " " + right).split())
             single_plain = " " not in wrong and _plain_word(wrong)
+            ctx = None
+            if single_plain:
+                nb = (before, f"{before} {wrong}", f"{before} {right}") if before else None
+                na = (after, f"{wrong} {after}", f"{right} {after}") if after else None
+                for c in (nb, na):
+                    if c and c[0].lower() not in STOP1 and c[0].lower() not in PRONOUNS and _plain_word(c[0]):
+                        ctx = c[1:]
+                        break
+            if ordinary:
+                if not ctx:
+                    return (f"not learned: {wrong} and {right} are both ordinary words; replacing one with the "
+                            "other everywhere would break text where you meant it")
+                n = self._confirmations(f"{ctx[0].lower()} => {ctx[1]}", source)
+                if n < 2:
+                    return f"noted once: {ctx[0]} -> {ctx[1]} (learned if you make the same fix in another dictation)"
+                self._forget_pending(f"{ctx[0].lower()} => {ctx[1]}")
+                self._append(self.rep_path, f"{ctx[0]} => {ctx[1]}")
+                return f"learned: {ctx[0]} -> {ctx[1]}"
             note = ""
             if single_plain:
-                # Learn the phrase with a neighbouring content word right away ("null difference" ->
-                # "null reference"): narrow, so safe. The bare word needs a second confirmation.
-                ctx = None
-                first_time = self._pending().get(f"{wrong.lower()} => {right}", 0) < 1
-                if before and before.lower() not in STOP1 and _plain_word(before):
-                    ctx = (f"{before} {wrong}", f"{before} {right}")
-                elif after and after.lower() not in STOP1 and _plain_word(after):
-                    ctx = (f"{wrong} {after}", f"{right} {after}")
-                if ctx and first_time and not any(len(ctx[0]) == w and rx.fullmatch(ctx[0]) for w, rx, r in self.rules):
+                key = f"{wrong.lower()} => {right}"
+                if ctx and key not in self._pending() and not any(len(ctx[0]) == w and rx.fullmatch(ctx[0]) for w, rx, r in self.rules):
                     self._append(self.rep_path, f"{ctx[0]} => {ctx[1]}")
                     note = f"learned: {ctx[0]} -> {ctx[1]}; "
-            if single_plain:
-                # a single ordinary word ("details") could be right elsewhere: wait for a second confirmation
-                p = self._pending()
-                key = f"{wrong.lower()} => {right}"
-                p[key] = p.get(key, 0) + 1
-                if p[key] < 2:
-                    with open(self.pending_path, "w", encoding="utf-8") as f:
-                        json.dump(p, f, indent=1)
-                    return note + f"noted once: {wrong} -> {right} (applies on its own after you correct it a second time)"
-                p.pop(key, None)
-                with open(self.pending_path, "w", encoding="utf-8") as f:
-                    json.dump(p, f, indent=1)
+                if self._confirmations(key, source) < 2:
+                    return note + f"noted once: {wrong} -> {right} (applies on its own after the same fix in another dictation)"
+                self._forget_pending(key)
             self._append(self.rep_path, f"{wrong} => {right}")
             if _enforce(right) or not right.islower():
                 self.add_keyword(right)           # also feed the right spelling to Whisper's glossary
@@ -309,7 +373,7 @@ class Vocab:
         if res is None:
             return None
         repl, casing = res
-        msgs = [self.learn(w, r, b, a) for w, r, b, a in repl]
+        msgs = [self.learn(w, r, b, a, source=dictated) for w, r, b, a in repl]
         for term in casing:
             if self.add_keyword(term):
                 msgs.append(f"learned spelling: {term}")
