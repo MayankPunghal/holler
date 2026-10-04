@@ -13,7 +13,7 @@ def _group(*names):
 
 GROUPS = {
     "ctrl": _group("ctrl", "ctrl_l", "ctrl_r"),
-    "alt": _group("alt", "alt_l", "alt_r"),
+    "alt": _group("alt", "alt_l", "alt_r", "alt_gr"),    # AltGr (right Alt on many layouts) counts as Alt
     "shift": _group("shift", "shift_l", "shift_r"),
     "win": _group("cmd", "cmd_l", "cmd_r"),
 }

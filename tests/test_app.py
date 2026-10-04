@@ -235,11 +235,11 @@ def dictate(text, wait=0.8):
 dictate("Dear team, new paragraph, pay five hundred rupees.")
 check("spoken command + smart format", app.pasted and app.pasted[-1][0] == "Dear team\n\nPay \u20b9500. ")
 
-# 10. undo hotkey (hold Ctrl+Alt+Win) deletes exactly the last paste
+# 10. undo hotkey (hold Ctrl+Alt) deletes exactly the last paste
 del EVENTS[:]
 npaste = len(app.pasted)
-app.on_press(CTRL); app.on_press(ALT); app.on_press(WIN); time.sleep(0.6)
-app.on_release(WIN); app.on_release(ALT); app.on_release(CTRL); time.sleep(0.5)
+app.on_press(CTRL); app.on_press(ALT); time.sleep(0.6)
+app.on_release(ALT); app.on_release(CTRL); time.sleep(0.5)
 n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
 check("undo hotkey sends one backspace per character", n_bs == len("Dear team\n\nPay \u20b9500. "))
 check("undo pops the paste", len(app.pasted) == npaste - 1)
@@ -247,8 +247,8 @@ check("undo pops the paste", len(app.pasted) == npaste - 1)
 # 11. quick tap of the undo chord does nothing
 dictate("Keep this sentence.")
 del EVENTS[:]
-app.on_press(CTRL); app.on_press(ALT); app.on_press(WIN); time.sleep(0.05)
-app.on_release(WIN); app.on_release(ALT); app.on_release(CTRL); time.sleep(0.6)
+app.on_press(CTRL); app.on_press(ALT); time.sleep(0.05)
+app.on_release(ALT); app.on_release(CTRL); time.sleep(0.6)
 check("quick tap of the undo chord does nothing", not any(w == "press backspace" for _, w in EVENTS))
 
 # 12. saying "scratch that" on its own undoes, and is not pasted
@@ -257,10 +257,22 @@ dictate("Scratch that.")
 n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
 check("spoken 'scratch that' undoes", n_bs == len("Keep this sentence. "))
 
+# 12b. adding Alt while the dictation chord is already recording switches to undo and drops the recording
+dictate("Another line for undo.")
+del EVENTS[:]
+RAW["v"] = "should not appear"
+n_before = len(log_lines())
+feed(0.0, 10)
+app.on_press(CTRL); app.on_press(WIN); time.sleep(0.5); feed(0.1, 10)
+app.on_press(ALT); time.sleep(0.6)
+app.on_release(ALT); app.on_release(WIN); app.on_release(CTRL); time.sleep(0.6)
+n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
+check("Alt during recording undoes and drops the recording", n_bs == len("Another line for undo. ") and len(log_lines()) == n_before)
+
 # 13. undo + say it again: the difference is learned
 dictate("Please review the Flurb module today.")
-app.on_press(CTRL); app.on_press(ALT); app.on_press(WIN); time.sleep(0.6)
-app.on_release(WIN); app.on_release(ALT); app.on_release(CTRL); time.sleep(0.4)
+app.on_press(CTRL); app.on_press(ALT); time.sleep(0.6)
+app.on_release(ALT); app.on_release(CTRL); time.sleep(0.4)
 dictate("Please review the Blurb module today.")
 pend = os.path.join(app.home, "replacements_pending.json")
 rep = open(os.path.join(app.home, "replacements.txt"), encoding="utf-8").read().lower()

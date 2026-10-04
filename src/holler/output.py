@@ -93,3 +93,19 @@ def backspace(n: int):
         kb.release(keyboard.Key.backspace)
         if i % 50 == 49:
             time.sleep(0.02)
+
+
+MASK_VK = 0xE8        # an unassigned virtual key (the one AutoHotkey uses for the same trick)
+
+
+def mask_win():
+    """Windows opens the Start menu or search when the Win key is released alone. A keystroke sent while Win is
+    held makes Windows treat it as a shortcut, so releasing Ctrl and Win unevenly no longer opens Start."""
+    if sys.platform != "win32":
+        return
+    try:
+        k = keyboard.KeyCode.from_vk(MASK_VK)
+        kb.press(k)
+        kb.release(k)
+    except Exception:
+        pass

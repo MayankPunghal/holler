@@ -39,6 +39,12 @@ check("email", full("send to john at example dot com please"), "send to john@exa
 check("filename", full("edit main dot py now"), "edit main.py now")
 check("url path", full("visit github dot com slash holler slash docs now"), "visit github.com/holler/docs now")
 check("'at' alone untouched", full("meet me at the office"), "meet me at the office")
+check("command ending a clause", full("It grew by 25% new paragraph, send it to john"), "It grew by 25%\n\nSend it to john")
+check("domain dots survive", full("Edit Program.cs, new line, then run it"), "Edit Program.cs\nThen run it")
+check("'the question mark' is talked about", full("I forgot the question mark."), "I forgot the question mark.")
+check("email with .com already written", full("The email reads John at example.com"), "The email reads john@example.com")
+check("at the rate", full("john at the rate example dot com"), "john@example.com")
+check("'look at google.com' untouched", full("Look at google.com"), "Look at google.com")
 check("undo phrase", is_undo("Scratch that."), True)
 check("undo phrase must be alone", is_undo("scratch that and write it again"), False)
 

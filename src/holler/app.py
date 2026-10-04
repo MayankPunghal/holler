@@ -1,5 +1,6 @@
 """The dictation controller: hotkey state machine, record -> transcribe -> clean -> paste, and learning."""
 import os
+import sys
 import threading
 import time
 
@@ -9,10 +10,10 @@ from .suggest import auto_add
 from .spoken import apply_commands, is_undo, smart_format
 from . import models
 from .engines import make_engine
-from .keys import Combo, key_id, K
+from .keys import GROUPS, Combo, key_id, K
 from difflib import SequenceMatcher
 
-from .output import backspace, beep, copy_selection, paste
+from .output import MASK_VK, backspace, beep, copy_selection, mask_win, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
 from .vocab import Vocab, align
@@ -118,7 +119,7 @@ class App:
                         f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}\t{raw}\t{text}\n")
                 except OSError:
                     pass
-            self._auto_learn(text)
+            learned = self._auto_learn(text)
             self.n_dictations += 1
             if a.auto_vocab and self.n_dictations % 20 == 0:
                 threading.Thread(target=self._auto_vocab, daemon=True).start()
@@ -132,7 +133,7 @@ class App:
                 self.synth = False
             if not a.enter:
                 self.pasted = (self.pasted + [(out, time.time())])[-10:]
-            self.overlay.set("done")
+            self.overlay.set("learned" if learned else "done")
             if a.sound:
                 beep("stop")
         except Exception:
@@ -150,17 +151,18 @@ class App:
         """Undo, then say it again: the difference between the two takes is a correction worth learning."""
         prev, self.undone = self.undone, None
         if not self.cfg.auto_learn or not prev or time.time() - prev[1] > 60:
-            return
+            return False
         old = prev[0].strip()
         if old.lower() == text.strip().lower() or SequenceMatcher(None, old.lower(), text.lower()).ratio() < 0.55:
-            return
+            return False
         try:
             msgs = self.vocab.learn_from_edit(old, text.strip())
         except Exception:
             log_error("auto-learn")
-            return
+            return False
         for m in msgs or []:
             print("Auto-learn:", m, flush=True)
+        return bool(msgs)
 
     def undo(self):
         """Delete the last pasted dictation (assumes the cursor hasn't moved since)."""
@@ -168,6 +170,7 @@ class App:
             while self.pasted and time.time() - self.pasted[-1][1] > 600:
                 self.pasted.pop()                         # too old to trust
             if not self.pasted:
+                print("Undo: nothing to undo.", flush=True)
                 self.overlay.set("noundo")
                 return
             text, _ = self.pasted.pop()
@@ -178,6 +181,7 @@ class App:
             finally:
                 self.synth = False
             self.undone = (text, time.time())
+            print(f"Undo: removed {len(text)} characters.", flush=True)
             self.last = self.pasted[-1][0].strip() if self.pasted else ""
             self.overlay.set("undone")
         except Exception:
@@ -253,8 +257,23 @@ class App:
         self.undo_timer = t
         t.start()
 
+    def _mask(self, combo):
+        """If the chord holds Win, send a dummy key so releasing Win never opens the Start menu."""
+        if sys.platform == "win32" and combo is not None and any(
+                k in slot for slot in combo.slots for k in GROUPS["win"]):
+            mask_win()
+
+    def _interrupt_recording(self):
+        """A different chord was completed while recording: drop the recording."""
+        with self.st:
+            was_down, self.down = self.down, False
+        self._cancel_pending()
+        if was_down:
+            self.rec.discard()
+            self.overlay.set("hide")
+
     def on_press(self, key):
-        if self.synth:
+        if self.synth or getattr(key, "vk", None) == MASK_VK:
             return
         kid = key_id(key)
         if kid == K.esc:
@@ -268,25 +287,28 @@ class App:
         was_talk, was_teach = self.talk.complete(self.held), self.teach_combo.complete(self.held)
         was_undo = bool(self.undo_combo and self.undo_combo.complete(self.held))
         self.held.add(kid)
+        if self.undo_timer and self.undo_combo and not self.undo_combo.includes(kid):
+            self.undo_timer.cancel()                      # another key joined: a shortcut, not the undo chord
         if self.undo_combo and self.undo_combo.complete(self.held) and not was_undo:
-            if not self.down:
-                self._cancel_pending()
-                if self.undo_combo.modifier_only:
-                    self._start_undo_timer()
-                else:
-                    threading.Thread(target=self.undo, daemon=True).start()
+            self._interrupt_recording()
+            self._mask(self.undo_combo)
+            if self.undo_combo.modifier_only:
+                self._start_undo_timer()
+            else:
+                threading.Thread(target=self.undo, daemon=True).start()
             return
         if self.teach_combo.complete(self.held) and not was_teach:
-            if not self.down:
-                self._cancel_pending()
-                if self.teach_combo.modifier_only:        # hold it briefly, like the dictation chord
-                    self._start_teach_timer()
-                else:
-                    threading.Thread(target=self.teach, daemon=True).start()
+            self._interrupt_recording()
+            self._mask(self.teach_combo)
+            if self.teach_combo.modifier_only:            # hold it briefly, like the dictation chord
+                self._start_teach_timer()
+            else:
+                threading.Thread(target=self.teach, daemon=True).start()
             return
         if self.talk.complete(self.held) and not was_talk:
             if any(not self.talk.includes(k) for k in self.held) or self.rec is None or self.paused:
                 return                                    # extra keys held: this is some other shortcut
+            self._mask(self.talk)
             with self.st:
                 if self.down or self.pending:
                     return
@@ -301,7 +323,7 @@ class App:
             self._cancel_pending()                        # a shortcut (Ctrl+Win+Left ...): not a dictation
 
     def on_release(self, key):
-        if self.synth:
+        if self.synth or getattr(key, "vk", None) == MASK_VK:
             return
         kid = key_id(key)
         was_talk = self.talk.complete(self.held)

@@ -135,7 +135,7 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | Quick tap, or a shortcut such as Ctrl+C or Ctrl+Win+Left | Nothing (that's what the hold delay is for) |
 | Press **Esc** while holding | Cancels the recording |
 | Fix a mistake by hand, then hold **Ctrl+Shift+Win** for a moment | Holler learns the correction |
-| Hold **Ctrl+Alt+Win**, or say "scratch that" on its own | Undo: the last dictation is deleted |
+| Hold **Ctrl+Alt**, or say "scratch that" on its own | Undo: the last dictation is deleted |
 | Click the tray icon | Settings, pause, quit |
 
 **The status pill** appears while you speak: a live waveform when listening, then "transcribing", and a check mark when the text is in. It also reports a muted or missing microphone instead of silently doing nothing.
@@ -158,7 +158,7 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | "open bracket, see note, close bracket" | "(see note)" |
 | "Total, colon, five hundred rupees" | "Total: ₹500" |
 
-Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon`, `open/close quote`, `slash`, `underscore`, `at sign`, `hashtag`. A phrase inside a sentence ("add a new line to the file") is left alone.
+Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon`, `open/close quote`, `slash`, `underscore`, `at sign`, `hashtag`. `new line`, `new paragraph`, `question mark` and `exclamation mark` also work at the end of a clause ("it grew by 25% new paragraph, send it..."). A phrase being talked about ("add a new line to the file", "the question mark") is left alone.
 
 **Smart formatting** (on by default; `smart_format: false` turns it off):
 
@@ -166,11 +166,11 @@ Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon
 |---|---|
 | "twenty five percent", "three point five percent" | `25%`, `3.5%` |
 | "five hundred rupees", "two thousand dollars", "five lakh rupees" | `₹500`, `$2,000`, `₹5 lakh` |
-| "john at example dot com" | `john@example.com` |
+| "john at example dot com", "john at the rate example dot com" | `john@example.com` |
 | "github dot com slash holler" | `github.com/holler` |
 | "edit main dot py" | `main.py` |
 
-**Undo.** Hold **Ctrl+Alt+Win** (the `undo_key` setting; blank turns it off) or say "scratch that" as a whole dictation. Holler deletes the last pasted text by sending Backspace for each character, so it assumes the cursor is where the dictation ended. You can undo several dictations in a row, up to 10 and within 10 minutes. It does nothing if you have `enter: true`.
+**Undo.** Hold **Ctrl+Alt** (the `undo_key` setting; blank turns it off) or say "scratch that" as a whole dictation. Holler deletes the last pasted text by sending Backspace for each character, so it assumes the cursor is where the dictation ended. You can undo several dictations in a row, up to 10 and within 10 minutes. It does nothing if you have `enter: true`.
 
 **Punctuation comes from how you speak.** Whisper decides between `.`, `?` and `!` from your wording and intonation, so a question needs a rising tone and a statement a falling one. Short, clearly paced sentences give the best results, and spoken commands give you exact control where it matters.
 
@@ -186,7 +186,7 @@ Whisper itself doesn't learn, so Holler learns the words around it, three ways:
 
 A fix that includes a neighbouring word ("null difference" → "null reference") is learned immediately. A fix to a single ordinary word is learned after you correct it twice, so one odd correction can't break a normal word everywhere.
 
-**It also improves by itself.**
+**It also improves by itself.** (To see it work: dictate a sentence, undo it, then say it again with the one word Holler got wrong spoken more clearly. If the two takes are similar, the pill says "Learned" and the new correction appears in the Vocabulary tab or in `replacements.txt`.)
 - **Undo and say it again.** If you undo a dictation and re-dictate within a minute, Holler compares the two takes and learns the difference as a correction, with the same safety rule as above. Turn it off with `auto_learn: false`.
 - **Automatic vocabulary.** Every 20 dictations (and at start-up) Holler looks at your local history for names and identifiers you dictate three or more times that your vocabulary lacks, and adds them as glossary-only entries (`~Name`), which steer the speech engine but never rewrite your text. At most 60 are added this way. Turn it off with `auto_vocab: false`. `holler suggest` shows what it would pick without adding anything.
 
@@ -210,7 +210,7 @@ Most settings are in the **Settings** window (open it with `py -m holler`). Ever
 |---|---|---|
 | `key` | `ctrl+win` | Key or chord to hold while speaking |
 | `hold_ms` | `350` | Hold time before recording starts (0 = instantly) |
-| `undo_key` | `ctrl+alt+win` | Chord that undoes the last dictation (blank = off) |
+| `undo_key` | `ctrl+alt` | Chord that undoes the last dictation (blank = off) |
 | `teach_key` | `ctrl+shift+win` | Chord that learns from the correction on the current line |
 | `engine` | `whisper` | Speech engine: `whisper`, or `parakeet` (optional extra) |
 | `model` | `small.en` | Model name, Hugging Face repo id, or a local folder (see [Speech models](#speech-models)) |
@@ -375,6 +375,7 @@ Report vulnerabilities as described in [SECURITY.md](https://github.com/MayankPu
 - **`holler` is not recognised.** Use `py -m holler`.
 - **The hotkey doesn't work in some app.** Choose a different chord in Settings. If the app runs as Administrator, run Holler as Administrator too.
 - **The hotkey stops responding after a while, or the tray icon disappears.** Holler restarts itself if it crashes, renews its keyboard hook every 15 minutes and after sleep, and reopens the microphone if it stops delivering audio. If it still happens, send `holler.log` and `crash.log` from the data folder (`holler where`) in an issue. The hotkey also can't see keys typed into a window that runs as Administrator unless Holler does too.
+- **The Start menu or search opens when I let go of Ctrl+Win.** Holler now sends a dummy key while the Win key is held, which stops Windows opening Start when the keys are released unevenly.
 - **A letter is typed when I use a chord.** Your layout treats that combination as a character (Ctrl+Alt is AltGr on many layouts). Use a modifier-only chord such as `ctrl+shift+win`.
 - **Nothing is pasted.** Try `paste: "type"` for apps that block paste, or `ctrl+shift+v` for Linux terminals.
 - **The pill doesn't show over some app.** Known issue: windows that pin themselves to the top (such as Claude Desktop on some setups) can hide it. Dictation still works.

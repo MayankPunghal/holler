@@ -31,7 +31,8 @@ COMMANDS = {
 }
 _PUNCT = ".,;:!?"
 _PHRASES = sorted(COMMANDS, key=len, reverse=True)
-_CLAUSE = re.compile(r"[^.,;:!?]+|[.,;:!?]+")
+_CLAUSE = re.compile(r"[.,;:!?]+(?=\s|$)|(?:[^.,;:!?]|[.,;:!?](?!\s|$))+")
+_SEP = re.compile(r"[.,;:!?]+$")
 
 
 def _is_cmd(words: str):
@@ -39,16 +40,38 @@ def _is_cmd(words: str):
     return COMMANDS.get(w)
 
 
+_TRAILING = ("new paragraph", "new line", "question mark", "exclamation mark", "exclamation point")
+_NOT_BEFORE = {"the", "a", "an", "this", "that", "my", "your", "no", "of", "with", "add", "insert", "type", "put",
+               "use", "is", "as", "for", "called", "another", "one", "each", "every", "after", "before"}
+
+
+def _split_trailing(p: str):
+    """'it grew by 25% new paragraph' -> ['it grew by 25%', 'new paragraph'] (a command that ends a clause).
+    Skipped when the word before it shows it is being talked about ('add a new line', 'the question mark')."""
+    low = p.strip().lower()
+    for ph in _TRAILING:
+        if low.endswith(" " + ph):
+            head = p.strip()[: -len(ph)].rstrip()
+            prev = head.split()[-1].lower().strip("\"'") if head.split() else ""
+            if prev in _NOT_BEFORE:
+                return [p]
+            return [head, ph]
+    return [p]
+
+
 def apply_commands(text: str) -> str:
-    """Turn stand-alone command clauses into symbols. Only clauses made of exactly one command are touched."""
-    parts = _CLAUSE.findall(text)
-    if not any(_is_cmd(p) for p in parts if p[0] not in _PUNCT):
+    """Turn command phrases into symbols: a clause that is exactly one command, or a clause that ends with
+    new line / new paragraph / question mark / exclamation mark."""
+    parts = []
+    for p in _CLAUSE.findall(text):
+        parts.extend([p] if _SEP.match(p) else _split_trailing(p))
+    if not any(_is_cmd(p) for p in parts if not _SEP.match(p)):
         return text
     out = ""            # built text
     cap = False         # capitalise the next letter
     glue_next = False   # an "open" symbol: next word attaches without a space
     for p in parts:
-        if p[0] in _PUNCT:
+        if _SEP.match(p):
             # separators next to a command are swallowed by it; others kept
             out = out.rstrip(" ") if out and not out.endswith("\n") else out
             if glue_next and (not out or out[-1] in "(\"\n/_@#\\"):
@@ -227,7 +250,25 @@ def _dots(s):
 _PATH = re.compile(rf"\b([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.{_TLD}) slash ([A-Za-z0-9_.-]+(?: slash [A-Za-z0-9_.-]+)*)", re.I)
 
 
+_AT_RATE = re.compile(r"(\S+)\s+at[- ]the[- ]rate(?:[- ]of)?(?:[- ](?:sign|symbol))?\s+(\S+)", re.I)
+_AT_SIGN = re.compile(r"(\S+)\s+at[- ]sign\s+(\S+)", re.I)
+_AT_DOMAIN = re.compile(rf"\b([A-Za-z0-9_.+-]+) at ([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.{_TLD})\b", re.I)
+_MAIL_WORDS = {"email", "e-mail", "mail", "send", "sent", "contact", "cc", "bcc", "write", "reach", "address",
+               "to", "from", "forward"}
+
+
+def _at_domain(m, text):
+    before = text[: m.start()].lower().split()[-5:]
+    local = m.group(1)
+    if any(w.strip(",.") in _MAIL_WORDS for w in before) or re.search(r"[0-9_.+]", local):
+        return f"{local}@{m.group(2)}".lower()
+    return m.group(0)
+
+
 def _smart_web(text: str) -> str:
+    text = _AT_RATE.sub(lambda m: f"{m.group(1)}@{m.group(2)}", text)
+    text = _AT_SIGN.sub(lambda m: f"{m.group(1)}@{m.group(2)}", text)
+    text = _AT_DOMAIN.sub(lambda m: _at_domain(m, text), text)
     text = _EMAIL.sub(lambda m: f"{m.group(1)}@{_dots(m.group(2))}.{m.group(3)}".lower(), text)
     text = _DOMAIN.sub(lambda m: f"{_dots(m.group(1))}.{m.group(2)}".lower(), text)
     text = _PATH.sub(lambda m: f"{m.group(1)}/" + re.sub(r"\s+slash\s+", "/", m.group(2), flags=re.I), text)
