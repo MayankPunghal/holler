@@ -119,6 +119,8 @@ sys.modules["faster_whisper"] = fw
 from holler import app as appmod, config, audio, models  # noqa: E402
 
 models.is_downloaded = lambda name: True          # no network in tests
+appmod.physically_down = lambda k: None        # fake keys: never ask Windows for the real key state
+appmod.foreground_window = lambda: None
 
 audio.TAIL_S = 0.05
 cfg = config.settings({"key": "ctrl+win", "teach_key": "ctrl+shift+win", "hold_ms": 200, "unload_after": 0.01, "overlay": False, "sound": False})
