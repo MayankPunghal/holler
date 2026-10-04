@@ -314,14 +314,16 @@ Then pick **parakeet** under *Settings > Speech engine*. It is fast on CPU and d
 Leaderboards don't know your accent or your jargon. Measure instead:
 
 ```powershell
-py -m holler bench record                       # read 24 sentences aloud (once; resumable)
-py -m holler bench run --models small.en,base.en,small
+py -m holler bench record                       # read 24 real-dictation lines aloud (once; resumable)
+py -m holler bench run --models small.en,small,medium.en,large-v3-turbo
 py -m holler bench run --models small.en,parakeet:nemo-parakeet-tdt-0.6b-v3
 ```
 
-It prints word error rate, speed and load time per model and shows the clips each one got wrong. Your vocabulary is included by default (`--no-hotwords` switches it off; `--raw` skips replacements and cleanup). How a number is written (`404` or "four hundred and four") is not counted as an error. You can add your own sentences as `NN.wav` plus `NN.txt` in the bench folder.
+The default set is real dictation, not tidy sentences: email addresses said with "at the rate", "scratch that" and "undo that" corrections, "new paragraph" and "question mark", percentages, rupees, times and dates, names and tech jargon, and easily confused words ("generally" / "genuinely"). You read each line exactly as shown, and it is scored on the text Holler would paste after vocabulary, cleanup, spoken commands and formatting, so a model that mishears "undo that" as "under that" is marked down. `--set basic` uses plainer sentences and `--set hinglish` Hinglish ones.
 
-Example: one Indian-English speaker, 24 jargon-heavy sentences, CPU laptop. A small sample, so treat differences of a point or two as noise.
+It prints word error rate, speed and load time per model and shows the clips each one got wrong. Your vocabulary is included by default (`--no-hotwords` switches it off; `--raw` scores the raw transcript). How a number is written (`404` or "four hundred and four", `23rd` or "twenty third") is not counted as an error. You can add your own lines as `NN.wav` plus `NN.txt` (the text that should be pasted) in the bench folder.
+
+Example (the earlier, plainer set): one Indian-English speaker, 24 jargon-heavy sentences, CPU laptop. A small sample, so treat differences of a point or two as noise.
 
 | Model | Word error rate | Speed |
 |---|---|---|

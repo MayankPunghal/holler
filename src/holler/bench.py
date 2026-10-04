@@ -44,6 +44,63 @@ PROMPTS = [
 ]
 
 
+# The default set: real dictation, built from the mistakes seen in daily use. Each entry is
+# (what to SAY, word for word, what should be PASTED). Commands ("new paragraph", "scratch that"), emails,
+# numbers, money, times and names are scored on the final text, exactly as Holler would paste it.
+DICTATION_PROMPTS = [
+    ("Hi, my name is Mayank and my email ID is john at the rate example dot com.",
+     "Hi, my name is Mayank and my email ID is john@example.com."),
+    ("Send the invoice to accounts at the rate sourcefuse dot com before Friday.",
+     "Send the invoice to accounts@sourcefuse.com before Friday."),
+    ("I was given a hike of twenty eight percent, which is around forty thousand rupees a year.",
+     "I was given a hike of 28%, which is around \u20b940,000 a year."),
+    ("I wake up at five fifteen AM and reach the gym by five fifty.",
+     "I wake up at 5:15 AM and reach the gym by 5:50."),
+    ("This is fun, scratch that, this is really fun.",
+     "This is really fun."),
+    ("Here is an apple, undo that, here is a mango.",
+     "Here is a mango."),
+    ("I am about seventy percent confident, actually scratch that, I am twenty percent confident this is production ready.",
+     "I am 20% confident this is production ready."),
+    ("Dear team, new paragraph, thanks for the quick turnaround on the release.",
+     "Dear team\n\nThanks for the quick turnaround on the release."),
+    ("Are you coming to the standup tomorrow, question mark",
+     "Are you coming to the standup tomorrow?"),
+    ("That was a great demo, exclamation mark",
+     "That was a great demo!"),
+    ("I am genuinely happy with the results, and generally the team agrees.",
+     "I am genuinely happy with the results, and generally the team agrees."),
+    ("I work at SourceFuse as a senior software engineer on dot net modernization.",
+     "I work at SourceFuse as a senior software engineer on .NET modernization."),
+    ("My birthday is on the twenty third of January, so I will turn twenty seven next year.",
+     "My birthday is on the 23rd of January, so I will turn 27 next year."),
+    ("Um, so basically, the meeting is moved to Thursday at three thirty PM.",
+     "So basically, the meeting is moved to Thursday at 3:30 PM."),
+    ("Save the export as report dot csv and share it on Slack.",
+     "Save the export as report.csv and share it on Slack."),
+    ("The source code is on github dot com slash holler.",
+     "The source code is on github.com/holler."),
+    ("Please mock the order repository with Moq and assert it was called once.",
+     "Please mock the order repository with Moq and assert it was called once."),
+    ("Deploy the Lambda function to the Mumbai region and check the CloudWatch logs.",
+     "Deploy the Lambda function to the Mumbai region and check the CloudWatch logs."),
+    ("Our Kubernetes cluster runs on Amazon EKS and Terraform manages the infrastructure.",
+     "Our Kubernetes cluster runs on Amazon EKS and Terraform manages the infrastructure."),
+    ("Mayank asked Harshita to review the Entity Framework migration before the release.",
+     "Mayank asked Harshita to review the Entity Framework migration before the release."),
+    ("The API returns a four hundred and four when the customer ID does not exist.",
+     "The API returns a 404 when the customer ID does not exist."),
+    ("Could you rename customerOrderId to orderId across the whole solution?",
+     "Could you rename customerOrderId to orderId across the whole solution?"),
+    ("Honestly, I think this tool will be production ready by the end of the month.",
+     "Honestly, I think this tool will be production ready by the end of the month."),
+    ("Okay, it has been a long day, I need to sleep because I have the gym at five fifteen tomorrow morning.",
+     "Okay, it has been a long day, I need to sleep because I have the gym at 5:15 tomorrow morning."),
+]
+
+# The earlier, plainer sentences (`holler bench record --set basic`).
+BASIC_PROMPTS = PROMPTS
+
 HINGLISH_PROMPTS = [
     "Kal subah meeting hai, isliye aaj raat tak report bhej dena.",
     "Yaar, ye bug production mein kaise aa gaya, kisi ne test nahi kiya kya?",
@@ -81,6 +138,22 @@ def _int_words(n: int) -> list[str]:
     return [str(n)]
 
 
+_ORD = {"one": "first", "two": "second", "three": "third", "five": "fifth", "eight": "eighth", "nine": "ninth",
+        "twelve": "twelfth"}
+
+
+def _ordinal(words: list[str]) -> list[str]:
+    """['twenty', 'three'] -> ['twenty', 'third'] (23rd is spoken 'twenty third')."""
+    last = words[-1]
+    if last in _ORD:
+        last = _ORD[last]
+    elif last.endswith("y"):
+        last = last[:-1] + "ieth"
+    else:
+        last += "th"
+    return words[:-1] + [last]
+
+
 def _spell_numbers(text: str) -> str:
     """'404' -> 'four hundred four', '3.30' / '3:30' -> 'three thirty', so "how a number is written" is not an error."""
     def clock(m):
@@ -88,6 +161,7 @@ def _spell_numbers(text: str) -> str:
         return " " + " ".join(_int_words(h) + ([] if mm == "00" else (["oh"] if mm[0] == "0" else []) + _int_words(int(mm)))) + " "
     text = re.sub(r"\b(\d{1,2})[:.](\d{2})\b", clock, text)
     text = re.sub(r"(?<=\d),(?=\d{3}\b)", "", text)                  # 2,500 -> 2500
+    text = re.sub(r"\b(\d+)(st|nd|rd|th)\b", lambda m: " " + " ".join(_ordinal(_int_words(int(m.group(1))))) + " ", text)
     return re.sub(r"\d+", lambda m: " " + " ".join(_int_words(int(m.group()))) + " ", text)
 
 
@@ -117,7 +191,11 @@ def wer(ref: str, hyp: str) -> tuple[int, int]:
 
 # ------------------------------------------------------------------ clips
 def default_folder(kind: str = "english") -> str:
-    return os.path.join(data_dir(), "bench-set" if kind == "english" else f"bench-set-{kind}")
+    return os.path.join(data_dir(), "bench-dictation" if kind == "english" else f"bench-set-{kind}")
+
+
+def prompts_for(kind: str = "english"):
+    return {"english": DICTATION_PROMPTS, "basic": BASIC_PROMPTS, "hinglish": HINGLISH_PROMPTS}[kind]
 
 
 def save_wav(path: str, audio: np.ndarray):
@@ -161,16 +239,19 @@ def record(folder: str, device=None, prompts=None) -> int:
     import sounddevice as sd
     from .audio import _resolve_device
     os.makedirs(folder, exist_ok=True)
-    prompts = prompts or PROMPTS
+    prompts = prompts or DICTATION_PROMPTS
     dev = _resolve_device(device)
     saved = 0
     print(f"Clips are saved in {folder}\nSpeak naturally, the way you dictate. You can also add your own sentences by "
           "putting NN.wav and NN.txt files in that folder.\n")
-    for i, sentence in enumerate(prompts, 1):
+    print("Read each line exactly as written, including the commands (\"new paragraph\", \"scratch that\", "
+          "\"at the rate\"). Clips are scored on what Holler would paste.\n")
+    for i, item in enumerate(prompts, 1):
+        say, sentence = item if isinstance(item, tuple) else (item, item)
         name = f"{i:02d}"
         if os.path.exists(os.path.join(folder, name + ".wav")):
             continue                                      # already recorded: only the new prompts are asked
-        print(f"[{i}/{len(prompts)}]  {sentence}")
+        print(f"[{i}/{len(prompts)}]  SAY:  {say}")
         ans = input("   Enter = record, s = skip, q = quit > ").strip().lower()
         if ans == "q":
             break
@@ -195,11 +276,12 @@ def record(folder: str, device=None, prompts=None) -> int:
 # ------------------------------------------------------------------ running
 def run(folder: str, model_names: list[str], engine: str = "whisper", beam: int = 2, hotwords: bool = True,
         pipeline: bool = True, say=print) -> list[dict]:
-    """Transcribe every clip with each model. With `pipeline`, the result goes through your vocabulary
-    replacements and Holler's cleanup, i.e. what would actually be pasted."""
+    """Transcribe every clip with each model. With `pipeline`, the result goes through everything Holler does
+    before pasting (vocabulary, cleanup, spoken commands, smart formatting), so it is scored on what you'd get."""
     from . import models
     from .cleanup import clean
     from .engines import make_engine
+    from .spoken import apply_commands, smart_format
     from .paths import PACKAGE_DATA
     from .vocab import Vocab
 
@@ -234,8 +316,7 @@ def run(folder: str, model_names: list[str], engine: str = "whisper", beam: int 
             text, _ = eng(audio, lang, keywords if getattr(eng, "supports_hotwords", True) else None)
             elapsed += time.time() - t1
             if pipeline:
-                text = vocab.apply(text)
-                text = clean(text)
+                text = smart_format(apply_commands(clean(vocab.apply(text))))
             e, n = wer(ref, text)
             errs, words = errs + e, words + n
             if e:

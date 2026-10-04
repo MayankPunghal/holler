@@ -58,6 +58,10 @@ check("'I said new paragraph' is talked about", full("I said new paragraph, not 
 check("undo phrases", [is_undo(x) for x in ["Scratch that.", "Undo that line", "undo", "Delete the last sentence.", "Remove that."]], [True] * 5)
 check("not undo phrases", [is_undo(x) for x in ["Undo that file change", "Please delete that.", "scratch that and write it again"]], [False] * 3)
 check("'at the rate' heard as 'thread'", full("My Email Lad is john.threadexample.com, I am 27"), "My Email Lad is john@example.com, I am 27")
+check("any email ending", full("Mail me at priya at the rate startup dot xyz today"), "Mail me at priya@startup.xyz today")
+check("any ending, glued", full("Send it to raviatcompany.tech please"), "Send it to ravi@company.tech please")
+check("any ending, 'at the rate' heard as thread", full("My email id is john.threadacme.co.in"), "My email id is john@acme.co.in")
+check("'the dot product' untouched", full("Compute the dot product of two vectors"), "Compute the dot product of two vectors")
 check("fused address outside email context", full("Visit whatever.com today"), "Visit whatever.com today")
 
 d = tempfile.mkdtemp()

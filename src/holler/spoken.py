@@ -243,9 +243,13 @@ def _digit_unit(m):
     return m.group(1) + "%" if sym == "%" else sym + m.group(1)
 
 
-_TLD = r"(?:com|org|net|io|dev|ai|app|in|co\.in|co\.uk|edu|gov|me|us|uk)"
+# Web addresses said without any email context ("github dot com") need a recognisable ending, or "the dot
+# product" would turn into an address. Email addresses ("at", "at the rate", "my email id is") accept any ending.
+_TLD = (r"(?:com|org|net|io|dev|ai|app|co|in|co\.in|co\.uk|edu|gov|me|us|uk|ca|au|de|fr|jp|sg|ae|nz|tech|xyz|info|"
+        r"biz|cloud|site|online|store|blog|page|tv|fm|gg|ly|so|sh|to)")
+_ANY_TLD = r"(?:[a-z]{2,24}(?:\.[a-z]{2,3})?)"
 _EXT = r"(?:py|js|ts|tsx|cs|json|txt|md|yaml|yml|html|css|csv|pdf|docx|xlsx|pptx|sql|sh|bat|exe|zip|png|jpg)"
-_EMAIL = re.compile(rf"\b([A-Za-z0-9_.+-]+) at ([A-Za-z0-9-]+(?: dot [A-Za-z0-9-]+)*) dot ({_TLD})\b", re.I)
+_EMAIL = re.compile(rf"\b([A-Za-z0-9_.+-]+) at ([A-Za-z0-9-]+(?: dot [A-Za-z0-9-]+)*) dot ({_ANY_TLD})\b", re.I)
 _DOMAIN = re.compile(rf"\b([A-Za-z0-9-]+(?: dot [A-Za-z0-9-]+)*) dot ({_TLD})\b(?=$|[\s/.,;:!?])", re.I)
 _FILE = re.compile(rf"\b([A-Za-z0-9_-]+) dot ({_EXT})\b", re.I)
 
@@ -259,7 +263,7 @@ _PATH = re.compile(rf"\b([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.{_TLD}) slash ([A-Za
 
 _AT_RATE = re.compile(r"([^\s,]+),?\s+at[- ]the[- ]rate(?:[- ]of)?(?:[- ](?:sign|symbol))?,?\s+(\S+)", re.I)
 _AT_SIGN = re.compile(r"(\S+)\s+at[- ]sign\s+(\S+)", re.I)
-_AT_DOMAIN = re.compile(rf"\b([A-Za-z0-9_.+-]+) at ([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.{_TLD})\b", re.I)
+_AT_DOMAIN = re.compile(rf"\b([A-Za-z0-9_.+-]+) at ([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.{_ANY_TLD})\b", re.I)
 _MAIL_WORDS = {"email", "e-mail", "mail", "send", "sent", "contact", "cc", "bcc", "write", "reach", "address",
                "to", "from", "forward"}
 
@@ -272,7 +276,7 @@ def _at_domain(m, text):
     return m.group(0)
 
 
-_FUSED = re.compile(rf"\b([A-Za-z0-9_.+-]{{3,}}?)at([A-Za-z0-9-]{{3,}}(?:\.[A-Za-z0-9-]+)*\.{_TLD})\b", re.I)
+_FUSED = re.compile(rf"\b([A-Za-z0-9_.+-]{{3,}}?)at([A-Za-z0-9-]{{3,}}(?:\.[A-Za-z0-9-]+)*\.{_ANY_TLD})\b", re.I)
 _FUSE_CONTEXT = {"email", "e-mail", "mail", "send", "sent", "contact", "cc", "bcc", "reach", "address", "forward",
                  "write"}
 
@@ -303,7 +307,7 @@ def _fused(m, text):
     return f"{_strip_id_words(m.group(1))}@{_strip_rate(m.group(2))}".lower()
 
 
-_DOTTED = re.compile(rf"\b([A-Za-z][A-Za-z0-9_+-]{{1,30}})\.([A-Za-z0-9-]{{2,}}\.{_TLD})\b(?!@)", re.I)
+_DOTTED = re.compile(rf"\b([A-Za-z][A-Za-z0-9_+-]{{1,30}})\.([A-Za-z0-9-]{{2,}}\.{_ANY_TLD})\b(?!@)", re.I)
 _ID_CONTEXT = {"email", "e-mail", "mail", "id", "address"}
 
 
