@@ -127,6 +127,24 @@ py -m pip uninstall holler
 
 Your settings, vocabulary, history and downloaded models live in the data folder (`%APPDATA%\Holler` on Windows, `~/.config/holler` on Linux; `holler where` prints it). Updating or uninstalling never touches it; delete the folder to remove everything.
 
+| File in the data folder | What it is |
+|---|---|
+| `config.json` | Your settings |
+| `keywords.txt`, `replacements.txt` | Your vocabulary and corrections (plain text, safe to edit) |
+| `dictation_log.tsv` | Local history (for the History page and learning) |
+| `models\` | Downloaded speech models |
+| `holler.log` | What Holler printed while running in the background |
+| `errors.log`, `crash.log` | Problems and hard crashes, for bug reports |
+
+**Updating to a version that isn't on PyPI yet** (testing a fix from GitHub):
+
+```powershell
+py -m holler stop
+py -m pip install --force-reinstall --no-deps https://github.com/MayankPunghal/holler/archive/refs/heads/main.zip
+py -m holler --version
+py -m holler
+```
+
 ## Using Holler
 
 | You do | What happens |
@@ -138,7 +156,9 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | Say "scratch that" (or "undo that", "delete that") as a dictation on its own | The last dictation is removed |
 | Click the tray icon | Settings, pause, quit |
 
-**The status pill** appears while you speak: a live waveform when listening, then "transcribing", and a check mark when the text is in. It also reports a muted or missing microphone instead of silently doing nothing.
+**The status pill** appears while you speak: a live waveform and a timer while listening, a flowing wave while transcribing, and a check mark when the text is in. It never takes focus or catches clicks, and it reports a muted or missing microphone instead of silently doing nothing.
+
+**Settings** (click the tray icon, or run `py -m holler` while Holler is running) has six pages: **General** (keys, text processing, inserting text, app behaviour), **Speech** (microphone, engine, the model in use, language, memory), **Models** (search, download, use and delete models, or add one from Hugging Face), **Vocabulary**, **History** and **About**. Save restarts Holler with the new settings.
 
 **What cleanup does** (switch off with `cleanup: false`):
 
@@ -174,7 +194,7 @@ Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon
 
 **Punctuation comes from how you speak.** Whisper decides between `.`, `?` and `!` from your wording and intonation, so a question needs a rising tone and a statement a falling one. Short, clearly paced sentences give the best results, and spoken commands give you exact control where it matters.
 
-**Hotkeys.** Any key or chord works: `ctrl+shift`, ``ctrl+` ``, `f9`, `scroll_lock`, `right_ctrl`. The default `ctrl+shift` is modifier keys only, so holding it never types anything, in any app or terminal, and it avoids the Win key (Windows opens the Start menu when Win is released) and Alt (which opens app menus). Shortcuts that start with Ctrl+Shift still work: pressing any other key while Holler is recording cancels the recording. If you have two keyboard layouts for the same language, Windows may use Ctrl+Shift to switch between them (Settings > Time & language > Typing > Advanced keyboard settings > Input language hot keys). When a chord ends in a real key, like the L in Ctrl+Shift+L, Holler keeps that key from the app, so it never types or replaces your selection. Use `holler keys` to see how a key is named.
+**Hotkeys.** Any key or chord works: `ctrl+shift`, ``ctrl+` ``, `f9`, `scroll_lock`, `right_ctrl`. The default `ctrl+shift` is modifier keys only, so holding it never types anything, in any app or terminal, and it avoids the Win key (Windows opens the Start menu when Win is released) and Alt (which opens app menus). Shortcuts that start with Ctrl+Shift still work: pressing any other key while Holler is recording cancels the recording. If you have two keyboard layouts for the same language, Windows may use Ctrl+Shift to switch between them (Settings > Time & language > Typing > Advanced keyboard settings > Input language hot keys). When a chord ends in a real key, like the L in Ctrl+Shift+L, Holler keeps that key from the app, so it never types or replaces your selection. Use `holler keys` to see how a key is named. The laptop **Fn** key can't be used on Windows: the keyboard handles it itself and never tells Windows it was pressed (macOS is different, which is why Mac dictation apps can use it).
 
 ## Teaching it your words
 
@@ -263,7 +283,7 @@ Environment variables: `HOLLER_HOME` (data folder), `HOLLER_MODEL_URL`, `HOLLER_
 
 ## Speech models
 
-Models download once into the data folder. The default balances accuracy, speed and memory.
+Models download once into the data folder and are managed on the **Models** page of Settings: search the list, download, switch with *Use this model*, and delete the ones you no longer need. Every download is checked against the SHA-256 that Hugging Face publishes, and only one download per model can run at a time. The default balances accuracy, speed and memory.
 
 | Model | Download | RAM | Notes |
 |---|---|---|---|
@@ -276,19 +296,25 @@ Models download once into the data folder. The default balances accuracy, speed 
 
 ### Using your own model
 
-Holler runs [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so it accepts any Whisper model converted to CTranslate2 format: distilled models, fine-tunes for an accent or language, or one you converted yourself. In **Settings > Speech model** (an editable box) or `model` in `config.json`, enter either:
+Holler runs [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so it accepts any Whisper model converted to CTranslate2 format: distilled models, fine-tunes for an accent or language, or one you converted yourself.
 
-- a Hugging Face repo id such as `Systran/faster-distil-whisper-large-v3`, which downloads into the models folder like the built-in ones, or
-- a folder on your PC containing `config.json`, `model.bin`, `tokenizer.json` and `vocabulary.txt` (or `vocabulary.json`).
+- **From Hugging Face:** on the Models page, type the repository id (such as `Systran/faster-distil-whisper-large-v3`) under *Add a model from Hugging Face* and click Download. It then appears in the list like the built-in ones. Search Hugging Face for "faster-whisper" or "ctranslate2" to find them, and check the repository's files include `model.bin`, `config.json`, `tokenizer.json` and `vocabulary.txt` (or `.json`).
+- **From a folder:** set `model` in `config.json` to a folder on your PC containing those files.
 
-Names containing `.en` or ending in `-en` are treated as English-only.
+A model published only in the usual PyTorch format (`model.safetensors`) must be converted first with `ct2-transformers-converter`. Other model families (Moonshine, Vosk) need their own engine. Names containing `.en` or ending in `-en` are treated as English-only. If a custom model returns only "." when given your vocabulary as a hint (fine-tuned models often do), Holler retries without the hint.
 
 ## Hinglish and Hindi
 
-Use a **multilingual** model (`small`, `medium`; the `.en` models are English only). Whisper decides how to write Hindi words: left on automatic it may output Devanagari or force Hindi words into odd English spellings. Two settings steer it:
+Use a **multilingual** model (`small`, `medium`, `large-v3-turbo`; the `.en` models are English only and cannot write Hindi at all). Be aware that standard Whisper handles mixed Hindi and English poorly: it often detects Hindi and then **translates** what you said into English, or writes Devanagari. Pick the behaviour under *Settings > Speech > Language*:
 
-- `lang`: `en`, `hi`, or empty for automatic.
-- `initial_prompt`: a short Roman-script sample such as `Haan bhai, main kal office aaunga. Meeting ke baad call kar lena, theek hai?` It nudges Whisper to write Hindi in English letters.
+| Language setting | What you get |
+|---|---|
+| Automatic | Whisper guesses per clip; short clips are often guessed wrong |
+| English | Roman letters, but Hindi phrases tend to be translated to English |
+| Hindi (Devanagari) | Hindi script |
+| Hinglish (Roman script) | English plus a Roman-Hinglish style hint (`initial_prompt`); the closest to how Hinglish is typed, still hit and miss |
+
+Models fine-tuned for Hinglish do much better at writing it the way it is typed. [Oriserve's Whisper-Hindi2Hinglish](https://huggingface.co/Oriserve/Whisper-Hindi2Hinglish-Swift) models (Apache-2.0) have community CTranslate2 conversions you can add on the Models page, for example `itsskofficial/livewhisper-hinglish-swift` (Whisper base size, 144 MB, fast on any CPU; its authors report 35 to 39% word error on Hinglish test sets) or `itsskofficial/livewhisper-hinglish-prime` (large-v3 size; too slow on a CPU without an NVIDIA GPU). These are third-party uploads.
 
 Which combination works best depends on your voice, so measure it:
 
@@ -297,7 +323,7 @@ py -m holler bench record --set hinglish
 py -m holler bench run --set hinglish --models small,small@en+hing,small@hi,medium@en+hing
 ```
 
-(`@en` and `@hi` set the language; `+hing` adds the built-in Roman-Hinglish prompt.) Hinglish spelling varies a lot (`nahi` against `nahin`), so compare models against each other rather than reading the percentage as an absolute score. India-focused fine-tunes such as [Oriserve's Hindi2Hinglish](https://github.com/OriserveAI/Whisper-Hindi2Hinglish) exist, but they are large and not in the CTranslate2 format Holler loads, so they need converting first.
+(`@en` and `@hi` set the language; `+hing` adds the built-in Roman-Hinglish prompt; a Hugging Face id such as `itsskofficial/livewhisper-hinglish-swift` benchmarks a fine-tuned model.) Hinglish spelling varies a lot (`nahi` against `nahin`), so compare models against each other rather than reading the percentage as an absolute score.
 
 ## Other engines (optional)
 
@@ -387,6 +413,10 @@ Report vulnerabilities as described in [SECURITY.md](https://github.com/MayankPu
 - **The model download fails.** Holler retries with `curl`, then the project mirror. See [If Hugging Face is unavailable](#if-hugging-face-is-unavailable).
 - **It recorded silence or nothing.** The pill says so. Check the microphone in Settings and Windows' privacy settings for microphone access.
 - **Is it as good as paid dictation tools?** Accuracy depends on your voice and vocabulary, which is why `holler bench` exists. For many people it is good enough, with the benefit of being offline and free.
+- **Saving settings didn't restart Holler.** Settings shows whether Holler came back up a few seconds after Save. If it says it didn't, run `py -m holler`.
+- **A downloaded model gives "," or "." or nonsense.** The download was probably interrupted or corrupted. Delete it on the Models page and download it again; downloads are now checked against Hugging Face's checksums.
+- **Hinglish comes out in English.** Standard Whisper translates mixed Hindi and English; see [Hinglish and Hindi](#hinglish-and-hindi).
+- **How does this compare with Wispr Flow?** Wispr Flow sends your audio and on-screen text to cloud GPUs and rewrites it with a language model, and charges a subscription. Holler keeps everything on your PC and uses rules instead of a language model, so it is free and private but relies on the model size your PC can run.
 - **Does it use my GPU?** Not yet; it is built to be light on CPU.
 
 ## Development

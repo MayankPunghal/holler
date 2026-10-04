@@ -1,4 +1,4 @@
-"""Shared bits for the setup wizard and the settings window (Tk/ttk, no extra dependencies)."""
+"""Shared bits for the setup wizard and the settings window (Tk/ttk, Sun Valley theme when available)."""
 import queue
 import sys
 import threading
@@ -18,25 +18,45 @@ def make_root(title: str, size: str, resizable=False) -> tk.Tk:
     root.title(title)
     root.geometry(size)
     root.resizable(resizable, resizable)
-    root.configure(bg=BG)
     style = ttk.Style(root)
+    family = "Segoe UI" if sys.platform == "win32" else ("Helvetica Neue" if sys.platform == "darwin" else "DejaVu Sans")
+    base = (family, 10)
+    themed = False
     try:
-        style.theme_use("vista" if sys.platform == "win32" else "clam")
-    except tk.TclError:
-        pass
-    base = ("Segoe UI", 10) if sys.platform == "win32" else ("TkDefaultFont", 10)
-    style.configure(".", font=base, background=BG)
-    style.configure("TFrame", background=BG)
-    style.configure("TLabel", background=BG)
-    style.configure("TCheckbutton", background=BG)
-    style.configure("TRadiobutton", background=BG)
-    style.configure("TLabelframe", background=BG)
-    style.configure("TLabelframe.Label", background=BG, font=base[:1] + (base[1], "bold"))
-    style.configure("Title.TLabel", font=(base[0], 17, "bold"), background=BG)
-    style.configure("Sub.TLabel", foreground="#555", background=BG)
-    style.configure("Good.TLabel", foreground="#15803d", background=BG)
-    style.configure("Bad.TLabel", foreground="#b91c1c", background=BG)
-    style.configure("Accent.TButton", font=base[:1] + (base[1], "bold"))
+        import sv_ttk                       # Windows 11 look (Sun Valley theme, MIT licence)
+        sv_ttk.set_theme("light")
+        themed = True
+    except Exception:
+        try:
+            style.theme_use("vista" if sys.platform == "win32" else "clam")
+        except tk.TclError:
+            pass
+    bg = (style.lookup("TFrame", "background") or BG) if themed else BG
+    card = bg if themed else "#ffffff"           # the Sun Valley card is the page colour with a border
+    side = "#eef0f4"
+    root.configure(bg=bg)
+    if not themed:
+        style.configure(".", font=base, background=bg)
+        for w in ("TFrame", "TLabel", "TCheckbutton", "TRadiobutton", "TLabelframe"):
+            style.configure(w, background=bg)
+        style.configure("Accent.TButton", font=base + ("bold",))
+        style.configure("Switch.TCheckbutton", background=card)
+        style.configure("Card.TFrame", background=card, relief="solid", borderwidth=1)
+    style.configure("TLabelframe.Label", background=bg, font=base + ("bold",))
+    style.configure("Title.TLabel", font=(family, 20, "bold"), background=bg)
+    style.configure("Brand.TLabel", font=(family, 15, "bold"), background=side, foreground="#111111")
+    style.configure("Sub.TLabel", foreground="#5f6368", background=bg)
+    style.configure("CardTitle.TLabel", font=(family, 10, "bold"), foreground="#3c4043", background=bg)
+    style.configure("Card.TLabel", font=(family, 10), **({} if themed else {"background": card}))
+    style.configure("CardSub.TLabel", foreground="#6b6f76", font=(family, 9), **({} if themed else {"background": card}))
+    style.configure("CardBody.TFrame", borderwidth=0, relief="flat", **({} if themed else {"background": card}))
+    style.configure("Side.TFrame", background=side)
+    style.configure("Bar.TFrame", background=bg)
+    style.configure("Good.TLabel", foreground="#15803d", background=bg)
+    style.configure("Bad.TLabel", foreground="#b91c1c", background=bg)
+    style.configure("Nav.Toolbutton", anchor="w", padding=(14, 8), font=(family, 10), background=side)
+    style.map("Nav.Toolbutton", background=[("selected", "#dde3ee"), ("active", "#e5e7ec")],
+              foreground=[("selected", "#0b57d0")])
     try:
         from PIL import ImageTk
         from ..tray import make_icon

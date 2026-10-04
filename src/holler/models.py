@@ -131,6 +131,50 @@ def _curl_download(url, out, progress, cancel):
         raise RuntimeError(f"curl failed (exit {p.returncode}) for {url}")
 
 
+def installed() -> list[str]:
+    """Every Whisper model on disk: catalogue names, Hugging Face ids you downloaded, and other model folders."""
+    root = os.path.join(data_dir(), "models")
+    out = [n for n in MODELS if is_downloaded(n)]
+    try:
+        entries = sorted(os.listdir(root))
+    except OSError:
+        entries = []
+    for d in entries:
+        path = os.path.join(root, d)
+        if d in MODELS or d == "huggingface" or not os.path.isdir(path):
+            continue
+        try:
+            with open(os.path.join(path, "source.txt"), encoding="utf-8") as f:
+                name = f.read().strip()
+        except OSError:
+            name = d.replace("_", "/", 1) if "_" in d else path       # older downloads: owner_name
+        if os.path.abspath(model_dir(name)) != os.path.abspath(path):
+            name = path
+        if is_downloaded(name):
+            out.append(name)
+    return out
+
+
+def disk_mb(name: str) -> int:
+    total = 0
+    for root, _, files in os.walk(model_dir(name)):
+        for f in files:
+            try:
+                total += os.path.getsize(os.path.join(root, f))
+            except OSError:
+                pass
+    return int(total / 1e6)
+
+
+def delete(name: str) -> None:
+    """Remove a downloaded model from the data folder (never a folder of your own outside it)."""
+    d = os.path.abspath(model_dir(name))
+    root = os.path.abspath(os.path.join(data_dir(), "models"))
+    if not d.startswith(root + os.sep):
+        raise RuntimeError("only models Holler downloaded can be deleted here")
+    shutil.rmtree(d)
+
+
 def upstream_sha256(name: str) -> dict:
     """{file: sha256} as published by Hugging Face for this model (best effort; {} when offline). Every large file
     on Hugging Face carries its SHA-256, so any model can be checked without a hand-kept list."""
@@ -263,6 +307,12 @@ def _download(name, dest, on_progress, cancel):
             except Exception:
                 if os.path.exists(out + ".part"):
                     os.remove(out + ".part")
+    if name not in MODELS:
+        try:
+            with open(os.path.join(dest, "source.txt"), "w", encoding="utf-8") as f:
+                f.write(name)                           # so Settings can show "owner/name", not a folder name
+        except OSError:
+            pass
     _auto_mirror(name)
     if on_progress:
         on_progress(1.0, "done")

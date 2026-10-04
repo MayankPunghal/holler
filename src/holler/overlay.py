@@ -34,14 +34,14 @@ VIOLET = (190, 160, 255)
 # state: (kind, accent colour, label, seconds until it hides itself)
 STATES = {
     "loading":      ("text",  AMBER, "Loading model",              None),
-    "ready":        ("text",  GREEN, "Ready - hold {key}",         2.2),
+    "ready":        ("text",  GREEN, "Ready \u00b7 hold {key}",    2.2),
     "listening":    ("wave",  RED,   None,                         None),
     "transcribing": ("think", BLUE,  None,                         None),
     "done":         ("check", GREEN, None,                         0.55),
     "empty":        ("text",  GREY,  "Didn't catch that",          1.4),
-    "nomic":        ("text",  AMBER, "No audio - check your mic",  2.5),
+    "nomic":        ("text",  AMBER, "No audio \u00b7 check your mic", 2.5),
     "cancelled":    ("text",  GREY,  "Cancelled",                  0.9),
-    "error":        ("text",  RED,   "Error - see dictation_errors.log", 3.5),
+    "error":        ("text",  RED,   "Something went wrong \u00b7 see errors.log", 3.5),
     "learned":      ("text",  GREEN, "Learned",                    1.6),
     "nothing":      ("text",  GREY,  "Nothing new to learn",       1.6),
     "undone":       ("text",  GREY,  "Removed the last dictation", 1.4),
@@ -54,7 +54,7 @@ STATES = {
 
 def _load_font(px: float):
     px = max(8, int(round(px)))
-    for name in (r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\segoeui.ttf",
+    for name in (r"C:\Windows\Fonts\seguisb.ttf", r"C:\Windows\Fonts\segoeui.ttf",
                  "/System/Library/Fonts/SFNS.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                  "DejaVuSans-Bold.ttf", "arial.ttf"):
         try:
@@ -67,6 +67,15 @@ def _load_font(px: float):
         return ImageFont.load_default()
 
 
+_KEY_NAMES = {"ctrl": "Ctrl", "shift": "Shift", "alt": "Alt", "win": "Win", "ctrl_r": "Right Ctrl",
+              "ctrl_l": "Left Ctrl", "alt_gr": "AltGr", "space": "Space"}
+
+
+def key_label(spec: str) -> str:
+    """'ctrl+shift' -> 'Ctrl+Shift', 'f9' -> 'F9'."""
+    return "+".join(_KEY_NAMES.get(p, p.upper() if len(p) <= 3 else p.capitalize()) for p in spec.split("+"))
+
+
 def _mix(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
@@ -74,14 +83,16 @@ def _mix(a, b, t):
 class PillRenderer:
     """Pure drawing + animation state (no OS calls), so it can be tested and previewed anywhere."""
 
-    W, H, PILL_H = 340, 84, 40            # logical canvas / pill size in px at 100% scaling
-    N_BARS = 9
-    ENV = (0.30, 0.52, 0.74, 0.90, 1.0, 0.90, 0.74, 0.52, 0.30)   # centre-weighted bars
+    W, H, PILL_H = 360, 84, 36            # logical canvas / pill size in px at 100% scaling
+    N_BARS = 15
+    ENV = tuple(math.exp(-((i - 7) / 4.2) ** 2) * 0.85 + 0.15 for i in range(15))   # centre-weighted bars
 
     def __init__(self, scale: float = 1.0, key_name: str = "key"):
         self.s = float(scale)
         self.key = key_name
-        self.font = _load_font(13 * self.s * SS)
+        self.font = _load_font(12.5 * self.s * SS)
+        self.small = _load_font(11 * self.s * SS)
+        self.bar_h = [3.0] * self.N_BARS
         self.state = None
         self.kind, self.accent, self.label = "text", GREY, ""
         self.width = self.target_w = 112.0
@@ -105,7 +116,7 @@ class PillRenderer:
             return
         kind, accent, label, auto = STATES[state]
         self.state, self.kind, self.accent = state, kind, accent
-        self.label = (label or "").format(key=self.key.upper())
+        self.label = (label or "").format(key=key_label(self.key))
         self.state_t, self.hide_after, self.want = 0.0, auto, True
         self.level_raw = level if state == "listening" else 0.0
         self.quiet = 0.0
@@ -114,11 +125,13 @@ class PillRenderer:
             self.width = self.target_w                  # appear at full size, don't grow from nothing
 
     def _target_width(self):
-        if self.kind in ("wave", "think"):
-            return 112.0
+        if self.kind == "wave":
+            return 168.0                                 # dot, waveform, timer
+        if self.kind == "think":
+            return 128.0
         if self.kind == "check":
-            return 58.0
-        return max(120.0, 18 + 8 + 10 + self.font.getlength(self.label) / (SS * self.s) + 22)
+            return 52.0
+        return max(110.0, 34 + self.font.getlength(self.label) / (SS * self.s) + 18)
 
     def step(self, dt: float) -> bool:
         """Advance animations by dt seconds. Returns True while the pill is visible."""
@@ -134,6 +147,12 @@ class PillRenderer:
         target = min(1.0, (self.level_raw / 0.10) ** 0.55) if self.kind == "wave" else 0.0
         k = 1 - math.exp(-dt * (30 if target > self.level else 7))   # fast attack, slow release
         self.level += (target - self.level) * k
+        if self.kind == "wave":                                      # bars glide towards the voice level
+            dead = self.quiet > 1.2
+            for i in range(self.N_BARS):
+                jit = 0.62 + 0.38 * (0.5 + 0.5 * math.sin(self.t * 8.5 + i * 1.3) * math.cos(self.t * 3.1 + i * 0.7))
+                want = 2.6 if dead else 2.6 + 22.0 * self.level * self.ENV[i] * jit
+                self.bar_h[i] += (want - self.bar_h[i]) * (1 - math.exp(-dt * 18))
         if self.kind == "wave" and self.level_raw < 0.004:
             self.quiet += dt
         elif self.kind == "wave":
@@ -146,15 +165,27 @@ class PillRenderer:
         s = self.s * SS
         W, H = self.W, self.H
         im = Image.new("RGBA", (int(W * s), int(H * s)), (0, 0, 0, 0))
-        d = ImageDraw.Draw(im)
         a = 1 - (1 - self.alpha) ** 3                              # ease-out
         cx, cy = W / 2, H / 2 + (1 - a) * 8                        # slides up as it appears
         w, h = self.width, self.PILL_H * (0.92 + 0.08 * a)
         x0, x1, y0, y1 = cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2
         c = lambda col, al=255: (*col, int(al * a))
 
-        d.rounded_rectangle([x0 * s, y0 * s, x1 * s, y1 * s], radius=h / 2 * s, fill=c(BG, 240),
-                            outline=c((255, 255, 255), 34), width=max(1, int(round(s * 0.8))))
+        # body: a soft vertical gradient (lighter at the top), a hairline border and a top highlight
+        body = Image.new("RGBA", im.size, (0, 0, 0, 0))
+        grad = Image.new("RGBA", im.size, (0, 0, 0, 0))
+        gd = ImageDraw.Draw(grad)
+        top, bot = (44, 44, 50), (20, 20, 23)
+        for yy in range(int(y0 * s), int(y1 * s) + 1):
+            f = (yy - y0 * s) / max(1.0, (y1 - y0) * s)
+            gd.line([(0, yy), (im.size[0], yy)], fill=(*_mix(top, bot, f), int(238 * a)))
+        mask = Image.new("L", im.size, 0)
+        ImageDraw.Draw(mask).rounded_rectangle([x0 * s, y0 * s, x1 * s, y1 * s], radius=h / 2 * s, fill=255)
+        body.paste(grad, (0, 0), mask)
+        im = Image.alpha_composite(im, body)
+        d = ImageDraw.Draw(im)
+        d.rounded_rectangle([x0 * s, y0 * s, x1 * s, y1 * s], radius=h / 2 * s, outline=c((255, 255, 255), 30),
+                            width=max(1, int(round(s * 0.8))))
         {"wave": self._wave, "think": self._think, "check": self._check, "text": self._text}[self.kind](
             d, s, c, x0, x1, cy)
 
@@ -162,8 +193,9 @@ class PillRenderer:
         # soft drop shadow, drawn at 1x (cheap) and composited underneath
         sh = Image.new("L", self.size, 0)
         ImageDraw.Draw(sh).rounded_rectangle(
-            [x0 * self.s, (y0 + 3) * self.s, x1 * self.s, (y1 + 3) * self.s], radius=h / 2 * self.s, fill=int(110 * a))
-        sh = sh.filter(ImageFilter.GaussianBlur(5 * self.s))
+            [(x0 + 2) * self.s, (y0 + 5) * self.s, (x1 - 2) * self.s, (y1 + 5) * self.s], radius=h / 2 * self.s,
+            fill=int(120 * a))
+        sh = sh.filter(ImageFilter.GaussianBlur(7 * self.s))
         shadow = Image.new("RGBA", self.size, (0, 0, 0, 0))
         shadow.putalpha(sh)
         return Image.alpha_composite(shadow, out)
@@ -171,19 +203,20 @@ class PillRenderer:
     def _dot(self, d, s, c, x, cy, pulse=False, breathe=False):
         col = self.accent
         if pulse:
-            r = 4.2 + 2.6 * (0.5 + 0.5 * math.sin(self.t * 5.5))
-            d.ellipse([(x - r) * s, (cy - r) * s, (x + r) * s, (cy + r) * s], fill=c(col, 70))
-        if breathe:
-            al = 150 + 105 * (0.5 + 0.5 * math.sin(self.t * 4))
-        else:
-            al = 255
-        r = 4.2
+            ph = (self.t * 1.4) % 1.0                                  # a ring that grows and fades, like a beacon
+            r = 4 + 6 * ph
+            d.ellipse([(x - r) * s, (cy - r) * s, (x + r) * s, (cy + r) * s], outline=c(col, int(150 * (1 - ph))),
+                      width=max(1, int(1.4 * s)))
+        al = 150 + 105 * (0.5 + 0.5 * math.sin(self.t * 4)) if breathe else 255
+        r = 5.2
+        d.ellipse([(x - r) * s, (cy - r) * s, (x + r) * s, (cy + r) * s], fill=c(col, int(al * 0.25)))
+        r = 3.6
         d.ellipse([(x - r) * s, (cy - r) * s, (x + r) * s, (cy + r) * s], fill=c(col, al))
 
-    def _bars(self, d, s, c, x0, x1, cy, heights, colours):
-        n, bw, gap = self.N_BARS, 3.0, 3.4
+    def _bars(self, d, s, c, x0, x1, cy, heights, colours, right=18):
+        n, bw, gap = self.N_BARS, 2.4, 2.7
         total = n * bw + (n - 1) * gap
-        bx = x0 + 34 + ((x1 - 18) - (x0 + 34) - total) / 2
+        bx = x0 + 32 + ((x1 - right) - (x0 + 32) - total) / 2
         for i in range(n):
             x = bx + i * (bw + gap)
             hh = heights[i]
@@ -193,20 +226,16 @@ class PillRenderer:
     def _wave(self, d, s, c, x0, x1, cy):
         dead = self.quiet > 1.2
         self._dot(d, s, c, x0 + 20, cy, pulse=not dead)
-        heights, cols = [], []
-        for i in range(self.N_BARS):
-            if dead:
-                heights.append(3.0)
-                cols.append((140, 140, 145, 150))
-            else:
-                jit = 0.55 + 0.45 * (0.5 + 0.5 * math.sin(self.t * 9 + i * 1.7))
-                heights.append(3.0 + 21.0 * self.level * self.ENV[i] * jit)
-                cols.append((255, 255, 255, 235))
-        self._bars(d, s, c, x0, x1, cy, heights, cols)
+        cols = [(140, 140, 145, 150) if dead else (*_mix((255, 255, 255), self.accent, abs(i - 7) / 9), 240)
+                for i in range(self.N_BARS)]
+        self._bars(d, s, c, x0, x1, cy, self.bar_h, cols, right=46)
+        secs = int(self.state_t)
+        d.text(((x1 - 16) * s, cy * s), f"{secs // 60}:{secs % 60:02d}", font=self.small,
+               fill=c((235, 235, 240), 150), anchor="rm")
 
     def _think(self, d, s, c, x0, x1, cy):
         self._dot(d, s, c, x0 + 20, cy, breathe=True)
-        heights = [3.0 + 14.0 * self.ENV[i] * (0.5 + 0.5 * math.sin(self.t * 6 - i * 0.8)) for i in range(self.N_BARS)]
+        heights = [2.6 + 12.0 * self.ENV[i] * (0.5 + 0.5 * math.sin(self.t * 6 - i * 0.55)) for i in range(self.N_BARS)]
         cols = [(*_mix(BLUE, VIOLET, i / (self.N_BARS - 1)), 240) for i in range(self.N_BARS)]
         self._bars(d, s, c, x0, x1, cy, heights, cols)
 
@@ -224,6 +253,9 @@ class PillRenderer:
             f = (run - seg[0]) / seg[1]
             path += [pts[1], (pts[1][0] + (pts[2][0] - pts[1][0]) * f, pts[1][1] + (pts[2][1] - pts[1][1]) * f)]
         xy = [((mx + x) * s, (cy + y) * s) for x, y in path]
+        g = min(1.0, self.state_t / 0.18)
+        r = 11 * g
+        d.ellipse([(mx - r) * s, (cy - r) * s, (mx + r) * s, (cy + r) * s], fill=c((30, 70, 42), 255))
         col = c(GREEN)
         d.line(xy, fill=col, width=int(2.8 * s), joint="curve")
         for px, py in (xy[0], xy[-1]):                              # round caps
@@ -231,8 +263,8 @@ class PillRenderer:
             d.ellipse([px - r, py - r, px + r, py + r], fill=col)
 
     def _text(self, d, s, c, x0, x1, cy):
-        self._dot(d, s, c, x0 + 18, cy, breathe=self.state == "loading")
-        d.text(((x0 + 31) * s, cy * s), self.label, font=self.font, fill=c((255, 255, 255), 238), anchor="lm")
+        self._dot(d, s, c, x0 + 19, cy, breathe=self.state == "loading")
+        d.text(((x0 + 33) * s, cy * s), self.label, font=self.font, fill=c((246, 246, 248), 240), anchor="lm")
 
 
 def to_bgra_premultiplied(img: Image.Image) -> bytes:
