@@ -105,7 +105,7 @@ Settings live in `%APPDATA%\Holler` (`holler where` prints the path): `config.js
 | Gain normalisation, silence detection | quiet mics still work; a muted mic is reported, not guessed |
 | Rule-based post-processing | casing, replacements, fillers and self-corrections cost microseconds, no LLM needed |
 
-Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, and multilingual `small` (Hindi, Hinglish and 90+ languages). Two experimental extras: `distil-small.en` and `large-v3-turbo` (more accurate, needs ~1.7 GB RAM).
+Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, and multilingual `tiny`, `base`, `small`, `medium` (Hindi, Hinglish and 90+ languages). Two experimental extras: `distil-small.en` and `large-v3-turbo` (more accurate, needs ~1.7 GB RAM).
 
 ## Troubleshooting
 

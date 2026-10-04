@@ -51,6 +51,7 @@ def build_parser():
     ex = sub.add_parser("export-model", help="copy a downloaded model to FOLDER, named for re-hosting as a mirror")
     ex.add_argument("folder")
     ex.add_argument("--model", default=None, help="default: the model in your settings")
+    ex.add_argument("--all", action="store_true", help="export every downloaded catalogue model")
     a = sub.add_parser("autostart", help="start with the computer")
     a.add_argument("state", choices=["on", "off", "status"])
     return ap
@@ -150,16 +151,20 @@ def main(argv=None) -> int:
         import os
         import shutil
         from . import models
-        name = ns.model or config.load()["model"]
-        if not models.is_downloaded(name):
-            print(f"{name} is not downloaded yet.")
+        names = [n for n in models.MODELS if models.is_downloaded(n)] if ns.all else [ns.model or config.load()["model"]]
+        if not names:
+            print("No catalogue models are downloaded yet.")
             return 1
         os.makedirs(ns.folder, exist_ok=True)
-        src = models.model_dir(name)
-        for f in sorted(os.listdir(src)):
-            if not f.endswith(".part"):
-                shutil.copy2(os.path.join(src, f), os.path.join(ns.folder, f"{name}-{f}"))
-                print(f"{name}-{f}")
+        for name in names:
+            if name not in models.MODELS or not models.is_downloaded(name):
+                print(f"{name}: not a downloaded catalogue model, skipped.")
+                continue
+            src = models.model_dir(name)
+            for f in sorted(os.listdir(src)):
+                if not f.endswith(".part"):
+                    shutil.copy2(os.path.join(src, f), os.path.join(ns.folder, f"{name}-{f}"))
+                    print(f"{name}-{f}")
     elif cmd == "doctor":
         from .doctor import run_doctor
         rc = run_doctor()

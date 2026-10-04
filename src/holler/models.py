@@ -14,7 +14,10 @@ MODELS = {
     "base.en":   (145,  170,  "light and quick; fine for clear speech"),
     "small.en":  (484,  320,  "recommended: accurate on accents and jargon"),
     "medium.en": (1530, 1300, "most accurate English, needs a fast PC and 1.3 GB RAM"),
+    "tiny":      (75,   120,  "multilingual, fastest, noticeably less accurate"),
+    "base":      (145,  170,  "multilingual (Hindi, Hinglish, 90+ languages), light and quick"),
     "small":     (484,  320,  "multilingual (Hindi, Hinglish, 90+ languages)"),
+    "medium":    (1530, 1300, "multilingual, most accurate of the standard sizes, needs a fast PC and 1.3 GB RAM"),
     "distil-small.en": (330, 250, "experimental: distilled small.en, faster, slightly less accurate"),
     "large-v3-turbo": (1620, 1700, "experimental: near large-v3 accuracy, multilingual, needs a fast PC and ~1.7 GB RAM"),
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+- Multilingual `tiny`, `base` and `medium` added to the catalogue (alongside `small`).
+- `holler export-model FOLDER --all` exports every downloaded catalogue model for mirroring.
+
 ## 0.4.0
 - Models no longer depend on one host: downloads try your own mirror (`model_url` / `HOLLER_MODEL_URL`), then Hugging Face, then the GitHub `models` release.
 - Use your own model: the Settings model box is editable and accepts a Hugging Face repo id or a local folder.
