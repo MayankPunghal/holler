@@ -190,13 +190,16 @@ def run(folder: str, model_names: list[str], engine: str = "whisper", beam: int 
     keywords = (vocab.prompt_terms() or None) if hotwords else None
     audio_seconds = sum(len(a) for _, a, _ in clips) / TARGET_SR
     results = []
-    for name in model_names:
-        say(f"\n== {name}")
-        if name in models.MODELS and not models.is_downloaded(name):
+    for spec in model_names:
+        from .engines import ENGINES
+        head, _, tail = spec.partition(":")                # "parakeet:nemo-parakeet-tdt-0.6b-v3", or just "small.en"
+        eng_name, name = (head, tail) if head in ENGINES else (engine, spec)       # (a path like C:\\models has a colon too)
+        say(f"\n== {spec}")
+        if eng_name == "whisper" and name in models.MODELS and not models.is_downloaded(name):
             say("   downloading...")
             models.download(name, on_progress=lambda f, t: None)
         t0 = time.time()
-        eng = make_engine(engine, name, beam)
+        eng = make_engine(eng_name, name, beam)
         load_s = time.time() - t0
         errs = words = 0
         elapsed = 0.0
@@ -215,7 +218,7 @@ def run(folder: str, model_names: list[str], engine: str = "whisper", beam: int 
         eng.unload()
         worst.sort(reverse=True)
         results.append({
-            "model": name, "engine": engine, "wer": round(100 * errs / max(words, 1), 2), "errors": errs, "words": words,
+            "model": spec, "engine": eng_name, "wer": round(100 * errs / max(words, 1), 2), "errors": errs, "words": words,
             "seconds_per_clip": round(elapsed / len(clips), 2), "rtf": round(elapsed / max(audio_seconds, 1e-9), 3),
             "load_seconds": round(load_s, 1), "worst": [{"clip": c, "expected": r, "got": g} for _, c, r, g in worst[:3]],
         })

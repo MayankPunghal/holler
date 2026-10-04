@@ -38,6 +38,13 @@ class General(ttk.Frame):
         self.dev = tk.StringVar(value=c["device"] if c["device"] in devs else "System default")
         row("Microphone", ttk.Combobox(self, textvariable=self.dev, values=devs, state="readonly", width=42))
 
+        from ..engines import DEFAULT_MODELS, ENGINES
+        self.engine = tk.StringVar(value=c["engine"] if c["engine"] in ENGINES else "whisper")
+        ec = ttk.Combobox(self, textvariable=self.engine, values=list(ENGINES), state="readonly", width=14)
+        ec.bind("<<ComboboxSelected>>", lambda e: self._engine_changed())
+        row("Speech engine", ec, "whisper is built in; parakeet needs: pip install \"holler[parakeet]\"")
+        self._default_models = DEFAULT_MODELS
+
         self.model = tk.StringVar(value=c["model"])
         names = [n for n, _ in model_choices()]
         mc = ttk.Combobox(self, textvariable=self.model, values=names, width=34)
@@ -79,8 +86,22 @@ class General(ttk.Frame):
         ttk.Checkbutton(self, text="Start with the computer", variable=self.auto).grid(row=r, column=0, columnspan=3,
                                                                                          sticky="w", pady=2)
 
+    def _engine_changed(self):
+        eng = self.engine.get()
+        cur = self.model.get().strip()
+        if eng != "whisper" and cur in models.MODELS:
+            self.model.set(self._default_models.get(eng, cur))
+        elif eng == "whisper" and cur not in models.MODELS and "/" not in cur and not models.is_local(cur):
+            self.model.set(self._default_models["whisper"])
+        self._model_changed()
+
     def _model_changed(self):
         name = self.model.get().strip()
+        if self.engine.get() != "whisper":
+            self.note.config(text=f"Engine {self.engine.get()}: the model downloads on first start (about 650 MB for Parakeet). "
+                                  "No hotword biasing: your vocabulary applies through the replacement rules.")
+            self.dl.grid_forget(); self.dlbtn.grid_forget()
+            return
         have = models.is_downloaded(name)
         if name in models.MODELS:
             mb, ram, note = models.MODELS[name]
@@ -103,7 +124,7 @@ class General(ttk.Frame):
         Combo(self.key.get()), Combo(self.teach.get())             # raises ValueError on a bad key name
         cfg.update(key=self.key.get(), teach_key=self.teach.get(), hold_ms=int(self.hold.get()),
                    device=None if self.dev.get() == "System default" else self.dev.get(),
-                   model=self.model.get().strip(), unload_after=float(self.unload.get()), paste=self.paste.get(),
+                   engine=self.engine.get(), model=self.model.get().strip(), unload_after=float(self.unload.get()), paste=self.paste.get(),
                    lang=self.lang.get().strip() or None)
         for k, v in self.bools.items():
             cfg[k] = bool(v.get())
@@ -327,7 +348,7 @@ class SettingsWindow:
         except ValueError as e:
             messagebox.showerror("Holler", str(e))
             return
-        if not models.is_downloaded(self.cfg["model"]):
+        if self.cfg["engine"] == "whisper" and not models.is_downloaded(self.cfg["model"]):
             if not messagebox.askyesno("Holler", f"The model {self.cfg['model']} is not downloaded yet. "
                                        "Save anyway? It will download when you next start dictation."):
                 return

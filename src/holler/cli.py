@@ -56,7 +56,7 @@ def build_parser():
     bn = sub.add_parser("bench", help="compare speech models on your own voice (record, then run)")
     bn.add_argument("action", choices=["record", "run"])
     bn.add_argument("folder", nargs="?", default=None, help="clips folder (default: bench-set in the data folder)")
-    bn.add_argument("--models", default=None, help="comma-separated, e.g. small.en,base.en (default: the model in your settings)")
+    bn.add_argument("--models", default=None, help="comma-separated, e.g. small.en,base.en,parakeet:nemo-parakeet-tdt-0.6b-v3 (default: your setting)")
     bn.add_argument("--engine", default="whisper")
     bn.add_argument("--no-hotwords", action="store_true", help="do not give Whisper your vocabulary")
     bn.add_argument("--raw", action="store_true", help="score the raw transcript (skip vocabulary fixes and cleanup)")

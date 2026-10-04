@@ -57,7 +57,7 @@ class App:
             log_error("startup")
             self.overlay.set("error")
             print("Startup failed - see errors.log in", self.home, flush=True)
-            if not models.is_downloaded(a.model):
+            if a.engine == "whisper" and not models.is_downloaded(a.model):
                 print(models.manual_instructions(a.model), flush=True)
 
     # ------------------------------------------------------------------ dictation

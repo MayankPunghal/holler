@@ -56,7 +56,16 @@ def run_doctor() -> int:
         fails += 1
         _line(BAD, f"microphone: {e}")
     # model
-    if models.is_downloaded(cfg.model):
+    if cfg.engine != "whisper":
+        try:
+            from .engines import ENGINES
+            import importlib
+            importlib.import_module(ENGINES[cfg.engine].split(":")[0])
+            _line(OK, f"engine {cfg.engine} ({cfg.model}); the model downloads on first start")
+        except Exception as e:
+            fails += 1
+            _line(BAD, f"engine {cfg.engine} is not available: {e}", "for parakeet: py -m pip install \"holler[parakeet]\"")
+    elif models.is_downloaded(cfg.model):
         _line(OK, f"model {cfg.model} is downloaded")
     else:
         _line(WARN, f"model {cfg.model} is not downloaded yet", "run: holler setup   (or it downloads on first start)")

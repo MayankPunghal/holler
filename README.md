@@ -117,6 +117,10 @@ Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, an
 - **Model download blocked by your network.** Holler retries with Windows' own `curl.exe` and, as a last resort, shows the files to download by hand. See *If Hugging Face is unavailable* below.
 - **Problems are logged** to `errors.log` in the data folder.
 
+## Other engines (optional)
+
+Whisper is built in. NVIDIA's Parakeet TDT is available as an extra: `py -m pip install "holler[parakeet]"`, then pick **parakeet** under *Settings > Speech engine*. It is fast on CPU and does not invent text during silence, but it can't take hotwords, so rely on your replacement rules. It is **new and untested on Indian-accented English**: run `holler bench` first and see which wins on your voice. Moonshine and Qwen3-ASR are candidates for later.
+
 ## Pick the best model for your voice
 
 Leaderboards don't know your accent or your jargon. Measure instead:
@@ -124,6 +128,7 @@ Leaderboards don't know your accent or your jargon. Measure instead:
 ```
 py -m holler bench record                       # read ~12 sentences aloud (once)
 py -m holler bench run --models small.en,base.en,small
+py -m holler bench run --models small.en,parakeet:nemo-parakeet-tdt-0.6b-v3   # after installing holler[parakeet]
 ```
 
 It prints word error rate, speed and load time per model, and shows the clips each one got wrong. Your vocabulary is included by default (`--no-hotwords` to switch it off; `--raw` skips fixes and cleanup). You can add your own sentences as `NN.wav` + `NN.txt` in the bench folder.
@@ -161,7 +166,7 @@ Layout: `src/holler/` has `cli`, `app` (hotkey state machine and pipeline), `key
 
 ## Status and roadmap
 
-Holler is in beta and built for Windows 10/11. The logic is tested; the Windows-specific parts (hotkeys, pill, tray, paste) are checked by hand. macOS and Linux are untested. Next: more engines (Parakeet, Moonshine, Qwen3-ASR) as optional extras, chosen with `holler bench`. Ideas: streaming partial text, GPU support, a Windows installer. Issues and pull requests are welcome, and a star helps others find it.
+Holler is in beta and built for Windows 10/11. The logic is tested; the Windows-specific parts (hotkeys, pill, tray, paste) are checked by hand. macOS and Linux are untested. Next: Moonshine and Qwen3-ASR as optional engines, if `holler bench` shows they help. Ideas: streaming partial text, GPU support, a Windows installer. Issues and pull requests are welcome, and a star helps others find it.
 
 ## Credits
 

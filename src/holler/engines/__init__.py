@@ -12,7 +12,9 @@ import importlib
 # name -> "module:Class" (imported lazily, so an engine's dependencies are only needed when it is chosen)
 ENGINES = {
     "whisper": "holler.engines.whisper:WhisperEngine",
+    "parakeet": "holler.engines.parakeet:ParakeetEngine",       # optional: pip install holler[parakeet]
 }
+DEFAULT_MODELS = {"whisper": "small.en", "parakeet": "nemo-parakeet-tdt-0.6b-v3"}
 
 
 def make_engine(engine: str, model: str, beam: int = 2):

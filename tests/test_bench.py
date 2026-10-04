@@ -82,7 +82,50 @@ def test_run_ranks_models():
     assert os.path.exists(bench.save_results(d, res))
 
 
+def test_parakeet_engine_with_fake_onnx_asr():
+    calls = []
+    fake = types.ModuleType("onnx_asr")
+
+    class M:
+        def recognize(self, audio, sample_rate=16000):
+            calls.append((audio.dtype.name, sample_rate))
+            return "  hello world  "
+
+    def load_model(name, quantization=None):
+        calls.append(("load", name, quantization))
+        return M()
+
+    fake.load_model = load_model
+    sys.modules["onnx_asr"] = fake
+    try:
+        eng = engines.make_engine("parakeet", "small.en")             # a leftover Whisper name -> default Parakeet model
+        assert calls[0] == ("load", "nemo-parakeet-tdt-0.6b-v3", "int8")
+        text, lang = eng(np.zeros(8000, dtype=np.float64), None, ["ignored"])
+        assert text == "hello world" and lang == "auto" and calls[-1] == ("float32", 16000)
+        assert eng.supports_hotwords is False
+        eng.unload()
+        assert eng.m is None
+        eng(np.zeros(100, dtype=np.float32), "en", None)       # reloads on demand
+        assert eng.m is not None
+    finally:
+        del sys.modules["onnx_asr"]
+
+
+def test_parakeet_missing_dependency_message():
+    sys.modules["onnx_asr"] = None                                     # import raises ImportError
+    try:
+        try:
+            engines.make_engine("parakeet", "nemo-parakeet-tdt-0.6b-v3")
+            raise AssertionError("expected RuntimeError")
+        except RuntimeError as e:
+            assert "holler[parakeet]" in str(e)
+    finally:
+        del sys.modules["onnx_asr"]
+
+
 if __name__ == "__main__":
+    test_parakeet_engine_with_fake_onnx_asr()
+    test_parakeet_missing_dependency_message()
     for t in (test_wer, test_wav_roundtrip_and_load_set, test_registry, test_run_ranks_models):
         t()
     print("ok")
