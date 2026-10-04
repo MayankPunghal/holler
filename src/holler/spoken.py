@@ -293,11 +293,3 @@ def smart_format(text: str) -> str:
     text = _format_numbers(text)
     text = _DIGIT_UNIT.sub(_digit_unit, text)
     return _smart_web(text)
-
-
-# ------------------------------------------------------------------ whole-dictation voice commands
-UNDO_PHRASES = {"undo", "undo that", "scratch that", "strike that", "delete that", "remove that", "take that back"}
-
-
-def is_undo(raw: str) -> bool:
-    return re.sub(r"[^a-z ]", "", raw.lower()).strip() in UNDO_PHRASES

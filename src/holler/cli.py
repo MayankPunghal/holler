@@ -21,7 +21,7 @@ from . import __version__, config, process
 from .paths import data_dir, log_error
 
 OVERRIDES = [  # command-line overrides for `run`; anything left out uses the saved settings
-    ("--key", "key", str), ("--hold-ms", "hold_ms", int), ("--teach-key", "teach_key", str), ("--undo-key", "undo_key", str),
+    ("--key", "key", str), ("--hold-ms", "hold_ms", int), ("--teach-key", "teach_key", str),
     ("--engine", "engine", str), ("--model", "model", str), ("--beam", "beam", int), ("--unload-after", "unload_after", float),
     ("--lang", "lang", str), ("--paste", "paste", str), ("--ui", "ui", str), ("--device", "device", str),
 ]

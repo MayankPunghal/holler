@@ -94,17 +94,36 @@ _WIN_VK = {"ctrl": 0x11, "ctrl_l": 0xA2, "ctrl_r": 0xA3, "alt": 0x12, "alt_l": 0
            "shift": 0x10, "shift_l": 0xA0, "shift_r": 0xA1, "cmd": 0x5B, "cmd_l": 0x5B, "cmd_r": 0x5C}
 
 
+def _vk_of(kid):
+    """Windows virtual-key code for a key id: modifiers by name, other named keys (space, f9...) from pynput,
+    characters via the keyboard layout."""
+    name = getattr(kid, "name", None)
+    if name in _WIN_VK:
+        return _WIN_VK[name]
+    vk = getattr(getattr(kid, "value", None), "vk", None)
+    if vk:
+        return vk
+    if isinstance(kid, int):
+        return kid or None
+    if isinstance(kid, str) and len(kid) == 1:
+        try:
+            import ctypes
+            r = ctypes.windll.user32.VkKeyScanW(ord(kid))
+            return (r & 0xFF) if r != -1 and (r & 0xFF) != 0xFF else None
+        except Exception:
+            return None
+    return None
+
+
 def physically_down(kid):
     """Is this key really held right now? None if unknown (non-Windows, or a key we can't map).
-    The keyboard hook can miss a release (sleep, lock screen, injected keys), which would leave Holler
-    believing a key is still held; asking Windows directly keeps its picture honest."""
+    The keyboard hook misses key-ups (Win+L locks the screen with L still down, sleep, lock screen typing),
+    which would leave Holler believing a key is held; asking Windows directly keeps its picture honest."""
     import sys
     if sys.platform != "win32":
         return None
-    vk = _WIN_VK.get(getattr(kid, "name", None))
-    if vk is None and isinstance(kid, int):
-        vk = kid
-    if vk is None:
+    vk = _vk_of(kid)
+    if not vk:
         return None
     try:
         import ctypes

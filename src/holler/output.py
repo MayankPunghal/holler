@@ -86,14 +86,6 @@ def copy_selection(whole_line: bool = False) -> str:
     return sel
 
 
-def backspace(n: int):
-    """Delete n characters before the cursor (used to undo the last dictation)."""
-    for i in range(max(0, n)):
-        kb.press(keyboard.Key.backspace)
-        kb.release(keyboard.Key.backspace)
-        time.sleep(0.008)          # some apps drop keystrokes that arrive too fast
-
-
 MASK_VK = 0xE8        # an unassigned virtual key (the one AutoHotkey uses for the same trick)
 
 
@@ -109,17 +101,3 @@ def mask_win():
     except Exception:
         pass
 
-
-def foreground_title() -> str:
-    """Title of the window that receives keystrokes (Windows only; for diagnostics)."""
-    if sys.platform != "win32":
-        return ""
-    try:
-        import ctypes
-        u = ctypes.windll.user32
-        h = u.GetForegroundWindow()
-        buf = ctypes.create_unicode_buffer(256)
-        u.GetWindowTextW(h, buf, 256)
-        return buf.value
-    except Exception:
-        return ""

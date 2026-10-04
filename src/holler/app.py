@@ -7,11 +7,11 @@ import time
 from . import audio as A
 from .cleanup import clean
 from .suggest import auto_add
-from .spoken import apply_commands, is_undo, smart_format
+from .spoken import apply_commands, smart_format
 from . import models
 from .engines import make_engine
 from .keys import GROUPS, Combo, key_id, K, physically_down
-from .output import MASK_VK, backspace, beep, copy_selection, foreground_title, mask_win, paste
+from .output import MASK_VK, beep, copy_selection, mask_win, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
 from .vocab import Vocab, align
@@ -23,7 +23,6 @@ class App:
         self.home = data_dir()
         self.talk = Combo(cfg.key)
         self.teach_combo = Combo(cfg.teach_key)
-        self.undo_combo = Combo(cfg.undo_key) if cfg.undo_key else None
         self.hold_s = max(0, cfg.hold_ms) / 1000.0
         self.vocab = Vocab(self.home, PACKAGE_DATA)
         self.extra_terms = [k.strip() for k in (cfg.extra_keywords or "").split(",") if k.strip()]
@@ -31,6 +30,7 @@ class App:
         self.busy = threading.Lock()         # one transcription at a time
         self.st = threading.Lock()           # guards pending/down
         self.held = set()                    # keys physically held right now
+        self.held_t = {}                     # when each held key went down
         self.down = False                    # recording
         self.pending = False                 # chord held, waiting out the hold delay
         self.timer = None
@@ -41,11 +41,7 @@ class App:
         self.last = ""                       # last text pasted (for learning)
         self.paused = False
         self.teach_timer = None
-        self.undo_timer = None
-        self.pasted = []                     # (text, time) of recent pastes, newest last, for undo
         self.n_dictations = 0
-        self.last_undo = 0.0
-        self.undone = None                   # (text, time) of the dictation the user just undid
         self.tray = tray
         self.download_only = download_only
 
@@ -65,8 +61,7 @@ class App:
             hold = f" for {a.hold_ms} ms" if self.hold_s else ""
             from . import __version__
             print(f"Holler {__version__}. Ready ({a.engine} {a.model}). Hold [{a.key}]{hold} and speak; release to paste. "
-                  f"Esc cancels. Learn a fix: [{a.teach_key}]."
-                  + (f" Undo: [{a.undo_key}] or say \"scratch that\"." if a.undo_key else ""), flush=True)
+                  f"Esc cancels. Learn a fix: [{a.teach_key}].", flush=True)
         except Exception:
             log_error("startup")
             self.overlay.set("error")
@@ -76,15 +71,21 @@ class App:
 
     # ------------------------------------------------------------------ dictation
     def _prune_held(self):
-        """Forget keys Windows says are no longer down (a missed key-up must not leave a chord 'held')."""
+        """Forget keys that are no longer down. A missed key-up (Win+L, sleep, the lock screen) must never leave
+        a 'ghost' key that makes Holler ignore the dictation chord. Windows is asked directly; a key it can't
+        answer for is dropped after 3 seconds unless it is a modifier."""
+        now = time.time()
+        mods = set().union(*GROUPS.values())
         for k in list(self.held):
-            if physically_down(k) is False:
+            state = physically_down(k)
+            if state is False or (state is None and k not in mods and now - self.held_t.get(k, now) > 3):
                 self.held.discard(k)
+                self.held_t.pop(k, None)
 
     def _wait_released(self, timeout=1.5):
         """Don't send Ctrl+V while a chord key (e.g. Win) is still physically down: Win+V is clipboard history."""
         t0 = time.time()
-        while time.time() - t0 < timeout and (self._prune_held() or True) and any(self.talk.includes(k) or self.teach_combo.includes(k) or (self.undo_combo and self.undo_combo.includes(k)) for k in self.held):
+        while time.time() - t0 < timeout and (self._prune_held() or True) and any(self.talk.includes(k) or self.teach_combo.includes(k) for k in self.held):
             time.sleep(0.02)
 
     def finish(self):
@@ -106,9 +107,6 @@ class App:
                 keywords = None                    # on short clips a glossary skews the words ("First line" -> "FirstLine")
             with self.busy:
                 raw, lang = self.engine(audio, a.lang, keywords)
-            if a.spoken_commands and is_undo(raw):             # "scratch that" on its own: remove the last dictation
-                self.undo()
-                return
             text = self.vocab.apply(raw)
             if a.cleanup:
                 text = clean(text)
@@ -127,7 +125,6 @@ class App:
                         f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}\t{raw}\t{text}\n")
                 except OSError:
                     pass
-            learned = self._auto_learn(text)
             self.n_dictations += 1
             if a.auto_vocab and self.n_dictations % 20 == 0:
                 threading.Thread(target=self._auto_vocab, daemon=True).start()
@@ -139,9 +136,7 @@ class App:
                 time.sleep(0.1)
             finally:
                 self.synth = False
-            if not a.enter:
-                self.pasted = (self.pasted + [(out, time.time())])[-10:]
-            self.overlay.set("learned" if learned else "done")
+            self.overlay.set("done")
             if a.sound:
                 beep("stop")
         except Exception:
@@ -154,52 +149,6 @@ class App:
                 print("Auto-vocabulary: added", t, flush=True)
         except Exception:
             log_error("auto-vocab")
-
-    def _auto_learn(self, text):
-        """Undo, then say it again: the difference between the two takes is a correction worth learning."""
-        prev, self.undone = self.undone, None
-        if not self.cfg.auto_learn or not prev or time.time() - prev[1] > 60:
-            return False
-        old = prev[0].strip()
-        try:
-            msgs = self.vocab.learn_auto(old, text.strip())
-        except Exception:
-            log_error("auto-learn")
-            return False
-        for m in msgs or []:
-            print("Auto-learn:", m, flush=True)
-        return bool(msgs)
-
-    def undo(self, wait=1.5):
-        """Delete the last pasted dictation (assumes the cursor hasn't moved since)."""
-        try:
-            while self.pasted and time.time() - self.pasted[-1][1] > 600:
-                self.pasted.pop()                         # too old to trust
-            if not self.pasted:
-                print("Undo: nothing to undo.", flush=True)
-                self.overlay.set("noundo")
-                return
-            if time.time() - self.last_undo < 1.5:            # a double trigger must not undo two dictations
-                return
-            self.last_undo = time.time()
-            text, _ = self.pasted.pop()
-            self._wait_released(wait)
-            time.sleep(0.25)                              # let the app finish handling the key-ups first
-            print(f"Undo: sending {len(text)} Backspaces to window '{foreground_title()}', keys still held: "
-                  f"{[getattr(k, 'name', k) for k in self.held]}", flush=True)
-            self.synth = True
-            try:
-                backspace(len(text))
-            finally:
-                self.synth = False
-            self.undone = (text, time.time())
-            print(f"Undo: removed {len(text)} characters.", flush=True)
-            self.last = self.pasted[-1][0].strip() if self.pasted else ""
-            self.overlay.set("undone")
-            self._start_listener()                        # fresh hook and key state after injecting keystrokes
-        except Exception:
-            log_error("undo")
-            self.overlay.set("error")
 
     def teach(self):
         try:
@@ -261,21 +210,11 @@ class App:
         self.teach_timer = t
         t.start()
 
-    def _start_undo_timer(self):
-        def fire():
-            if self.undo_combo.complete(self.held) and not self.down and time.time() - self.last_undo > 1.5:
-                self.overlay.set("undoarmed")             # feedback: the chord was recognised, now let go
-                self.undo(wait=4.0)
-        t = threading.Timer(max(self.hold_s, 0.3), fire)
-        t.daemon = True
-        self.undo_timer = t
-        t.start()
-
     def _mask(self, combo):
         """If the chord holds Win or Alt, send a dummy key so releasing it alone never opens Start or a menu bar."""
         if sys.platform == "win32" and combo is not None and any(
                 k in slot for slot in combo.slots for k in GROUPS["win"] | GROUPS["alt"]):
-            threading.Thread(target=mask_win, daemon=True).start()   # never inject keys inside the hook callback
+            threading.Timer(0.06, mask_win).start()   # after Windows has seen Win go down; never inside the hook
             # Alt pressed and released alone would highlight the menu bar and eat keystrokes
 
     def _interrupt_recording(self):
@@ -303,19 +242,8 @@ class App:
             return
         self._prune_held()
         was_talk, was_teach = self.talk.complete(self.held), self.teach_combo.complete(self.held)
-        was_undo = bool(self.undo_combo and self.undo_combo.complete(self.held))
         self.held.add(kid)
-        if (self.undo_timer and self.undo_combo and not self.undo_combo.includes(kid)
-                and kid not in GROUPS["win"]):            # Win may join: Ctrl+Alt+Win undoes as well
-            self.undo_timer.cancel()                      # another key joined: a shortcut, not the undo chord
-        if self.undo_combo and self.undo_combo.complete(self.held) and not was_undo:
-            self._interrupt_recording()
-            self._mask(self.undo_combo)
-            if self.undo_combo.modifier_only:
-                self._start_undo_timer()
-            else:
-                threading.Thread(target=lambda: self.undo(wait=4.0), daemon=True).start()
-            return
+        self.held_t.setdefault(kid, time.time())
         if self.teach_combo.complete(self.held) and not was_teach:
             self._interrupt_recording()
             self._mask(self.teach_combo)
@@ -350,10 +278,9 @@ class App:
         kid = key_id(key)
         was_talk = self.talk.complete(self.held)
         self.held.discard(kid)
+        self.held_t.pop(kid, None)
         if self.teach_timer and not self.teach_combo.complete(self.held):
             self.teach_timer.cancel()
-        if self.undo_timer and not (self.undo_combo and self.undo_combo.complete(self.held)):
-            self.undo_timer.cancel()
         if was_talk and not self.talk.complete(self.held):
             if self.pending:
                 self._cancel_pending()                    # a tap: ignore
@@ -375,7 +302,13 @@ class App:
             except Exception:
                 pass
         self.held.clear()
-        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        self.held_t.clear()
+        kw = {}
+        if sys.platform == "win32":
+            # Ignore keystrokes that software injects (Holler's own paste and mask key, other tools): only real
+            # key presses can start a dictation, and injected events can never leave a 'ghost' held key.
+            kw["win32_event_filter"] = lambda msg, data: not (data.flags & 0x10)     # LLKHF_INJECTED
+        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release, **kw)
         self.listener.start()
 
     def watchdog(self):
@@ -390,13 +323,20 @@ class App:
             rec, eng = self.rec, self.engine
             idle = not self.down and not self.pending and not self.busy.locked()
             try:
-                if idle and self.listener is not None and (
-                        woke or not self.listener.is_alive() or now - last_renew > 900):
+                if woke:                                   # start clean after sleep, whatever state we were in
+                    self._interrupt_recording()
                     self._start_listener()
                     last_renew = now
-                    if woke:
-                        print("Keyboard hook renewed.", flush=True)
-                if idle and rec is not None and (woke or not rec.healthy()):
+                    if rec is not None:
+                        rec.reopen()
+                    print("Woke from sleep: keyboard hook and microphone renewed.", flush=True)
+                    continue
+                self._prune_held()
+                if idle and self.listener is not None and (
+                        not self.listener.is_alive() or now - last_renew > 900):
+                    self._start_listener()
+                    last_renew = now
+                if idle and rec is not None and not rec.healthy():
                     rec.reopen()
                     print("Microphone reopened.", flush=True)
             except Exception:

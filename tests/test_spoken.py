@@ -1,10 +1,10 @@
-"""Spoken commands, smart formatting, undo phrases and vocabulary suggestions: python tests/test_spoken.py"""
+"""Spoken commands, smart formatting and vocabulary suggestions: python tests/test_spoken.py"""
 import os
 import sys
 import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
-from holler.spoken import apply_commands, is_undo, smart_format  # noqa: E402
+from holler.spoken import apply_commands, smart_format  # noqa: E402
 from holler.suggest import suggest  # noqa: E402
 
 bad = 0
@@ -49,26 +49,24 @@ check("at the rate with commas", full("Send it to john, at the rate, example dot
 check("at the rate of", full("john at the rate of gmail.com"), "john@gmail.com")
 check("fused address in email context", full("Send it to johnatexample.com."), "Send it to john@example.com.")
 check("fused address outside email context", full("Visit whatever.com today"), "Visit whatever.com today")
-check("undo phrase", is_undo("Scratch that."), True)
-check("undo phrase must be alone", is_undo("scratch that and write it again"), False)
 
 d = tempfile.mkdtemp()
 log = os.path.join(d, "log.tsv")
 with open(log, "w", encoding="utf-8") as f:
     for i in range(5):
-        f.write(f"t\traw\tWe deploy with Zorbify and use order_id here {i}.\n")
+        f.write(f"t\traw\tWe deploy with ZorbApi and use order_id here {i}.\n")
     f.write("t\traw\tOnce we saw Quuxer here.\n")
 got = dict(suggest(log, ["kubernetes"]))
-check("suggests repeated unusual terms", sorted(got), ["Zorbify", "order_id"])
-check("skips known terms", dict(suggest(log, ["~Zorbify"])).get("Zorbify"), None)
+check("suggests repeated unusual terms", sorted(got), ["ZorbApi", "order_id"])
+check("skips known terms", dict(suggest(log, ["~ZorbApi"])).get("ZorbApi"), None)
 
 from holler.vocab import Vocab  # noqa: E402
 from holler.suggest import auto_add  # noqa: E402
 vd = tempfile.mkdtemp()
 v = Vocab(vd)
-check("auto_add adds glossary-only terms", sorted(auto_add(log, v)), ["Zorbify", "order_id"])
+check("auto_add adds glossary-only terms", sorted(auto_add(log, v)), ["ZorbApi", "order_id"])
 check("auto_add is idempotent", auto_add(log, v), [])
-check("auto terms are glossary-only", "~Zorbify" in v.keyword_list(), True)
+check("auto terms are glossary-only", "~ZorbApi" in v.keyword_list(), True)
 
 print("ALL OK" if not bad else f"{bad} FAILED")
 sys.exit(1 if bad else 0)

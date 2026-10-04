@@ -9,7 +9,7 @@ _WORD = re.compile(r"[A-Za-z][A-Za-z0-9_.#+-]{2,}")
 def _looks_special(w: str, start_of_sentence: bool) -> bool:
     if any(c.isupper() for c in w[1:]) or any(c.isdigit() for c in w) or "_" in w or "." in w.strip("."):
         return True                                   # xUnit, gRPC, order_id, Program.cs, utf8
-    return w[0].isupper() and not start_of_sentence   # a name in the middle of a sentence
+    return False                                      # plain words and names ("Team") are left to you
 
 
 def _plain_name(w: str) -> bool:

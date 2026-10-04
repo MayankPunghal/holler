@@ -117,7 +117,7 @@ from holler import app as appmod, config, audio, models  # noqa: E402
 models.is_downloaded = lambda name: True          # no network in tests
 
 audio.TAIL_S = 0.05
-cfg = config.settings({"hold_ms": 200, "unload_after": 0.01, "overlay": False, "sound": False, "undo_key": "ctrl+alt"})
+cfg = config.settings({"hold_ms": 200, "unload_after": 0.01, "overlay": False, "sound": False})
 cfg.overlay, cfg.sound = False, False
 app = appmod.App(cfg)
 threading.Thread(target=app.boot, daemon=True).start()
@@ -232,68 +232,16 @@ def dictate(text, wait=0.8):
     time.sleep(wait)
 
 
+PASTED = []
+_orig_paste = appmod.paste
+appmod.paste = lambda t, *a, **k: (PASTED.append(t), _orig_paste(t, *a, **k))
 dictate("Dear team, new paragraph, pay five hundred rupees.")
-check("spoken command + smart format", app.pasted and app.pasted[-1][0] == "Dear team\n\nPay \u20b9500. ")
+check("spoken command + smart format", PASTED and PASTED[-1] == "Dear team\n\nPay \u20b9500. ")
 
-# 10. undo hotkey (hold Ctrl+Alt) deletes exactly the last paste
-del EVENTS[:]
-npaste = len(app.pasted)
-app.on_press(CTRL); app.on_press(ALT); time.sleep(0.6)
-app.on_release(ALT); app.on_release(CTRL); time.sleep(0.5)
-n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
-check("undo hotkey sends one backspace per character", n_bs == len("Dear team\n\nPay \u20b9500. "))
-check("undo pops the paste", len(app.pasted) == npaste - 1)
-
-# 11. quick tap of the undo chord does nothing
-dictate("Keep this sentence.")
-del EVENTS[:]
-app.on_press(CTRL); app.on_press(ALT); time.sleep(0.05)
-app.on_release(ALT); app.on_release(CTRL); time.sleep(0.6)
-check("quick tap of the undo chord does nothing", not any(w == "press backspace" for _, w in EVENTS))
-
-# 12. saying "scratch that" on its own undoes, and is not pasted
-del EVENTS[:]
-dictate("Scratch that.")
-n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
-check("spoken 'scratch that' undoes", n_bs == len("Keep this sentence. "))
-
-# 12b. adding Alt while the dictation chord is already recording switches to undo and drops the recording
-dictate("Another line for undo.")
-del EVENTS[:]
-RAW["v"] = "should not appear"
-n_before = len(log_lines())
-feed(0.0, 10)
-app.on_press(CTRL); app.on_press(WIN); time.sleep(0.5); feed(0.1, 10)
-app.on_press(ALT); time.sleep(0.6)
-app.on_release(ALT); app.on_release(WIN); app.on_release(CTRL); time.sleep(0.6)
-n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
-check("Alt during recording undoes and drops the recording", n_bs == len("Another line for undo. ") and len(log_lines()) == n_before)
-
-# 13. undo + say it again: the same fix seen twice is learned; a different sentence is not
-UNDO = lambda: (app.on_press(CTRL), app.on_press(ALT), time.sleep(0.6), app.on_release(ALT), app.on_release(CTRL), time.sleep(2.0))
-for _ in range(2):
-    dictate("Please review the Flurb module today.")
-    UNDO()
-    dictate("Please review the Blurb module today.")
-    UNDO()
-dictate("Line two.")
-UNDO()
-dictate("Line three.")
-rep = open(os.path.join(app.home, "replacements.txt"), encoding="utf-8").read().lower()
-check("different sentence after undo is not learned", "two =>" not in rep and "2nd" not in rep)
-pending = rep
-check("undo then redo teaches the correction (seen twice)", "flurb => blurb" in rep)
-
-# 14. a non-modifier undo key chord (fires on the last key, waits for the keys to come up)
-from holler.keys import Combo  # noqa: E402
-app.undo_combo = Combo("ctrl+shift+z")
-dictate("Undo me with the default chord.")
-del EVENTS[:]
-Z = KeyCode(char="\x1a", vk=90)
-app.on_press(CTRL); app.on_press(SHIFT); app.on_press(Z); time.sleep(0.2)
-app.on_release(Z); app.on_release(SHIFT); app.on_release(CTRL); time.sleep(1.0)
-n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
-check("Ctrl+Shift+Z undoes exactly the last dictation", n_bs == len("Undo me with the default chord. "))
+# 10. a ghost key (a key-up the hook never saw, e.g. after Win+L) must not block the dictation chord forever
+app.held.add("l"); app.held_t["l"] = time.time() - 10
+dictate("Ghost keys are ignored.")
+check("stale ghost key is dropped and dictation works", PASTED and PASTED[-1] == "Ghost keys are ignored. ")
 
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)
