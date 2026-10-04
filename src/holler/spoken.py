@@ -324,10 +324,11 @@ def smart_format(text: str) -> str:
     return _smart_web(text)
 
 
-# A whole dictation that is only one of these undoes the last dictation.
-UNDO_PHRASES = {"scratch that", "undo", "undo that", "delete that", "strike that", "remove that", "erase that",
-                "scratch the last line", "delete the last line", "undo the last line"}
+# A whole dictation that is only an undo phrase removes the last dictation:
+# "scratch that", "undo", "undo that line", "delete the last sentence", "remove that", "erase it"...
+_UNDO = re.compile(r"(scratch|undo|delete|remove|erase|strike)( (that|it))?"
+                   r"( (the )?(last )?(line|sentence|bit|part))?( please)?")
 
 
 def is_undo(raw: str) -> bool:
-    return re.sub(r"[^a-z ]", "", raw.lower()).strip() in UNDO_PHRASES
+    return bool(_UNDO.fullmatch(re.sub(r"[^a-z ]", "", raw.lower()).strip()))

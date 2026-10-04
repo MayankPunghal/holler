@@ -140,7 +140,7 @@ class App:
                 threading.Thread(target=self._auto_vocab, daemon=True).start()
             self._wait_released()
             self.synth = True
-            out = text + " " if (a.trailing_space and not a.enter) else text
+            out = text + " " if (a.trailing_space and not a.enter and not text.endswith("\n")) else text
             try:
                 paste(out, a.paste, a.enter)
                 time.sleep(0.1)

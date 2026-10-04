@@ -4,7 +4,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
-from holler.spoken import apply_commands, smart_format  # noqa: E402
+from holler.spoken import apply_commands, is_undo, smart_format  # noqa: E402
 from holler.suggest import suggest  # noqa: E402
 
 bad = 0
@@ -55,6 +55,8 @@ check("NewParagraph written as one word", full("This is line one. NewParagraph. 
 check("new-paragraph with a hyphen at clause end", full("It is up by 25% New-Paragraph, next one"), "It is up by 25%\n\nNext one")
 check("stand-alone exclamation", full("This is really fun. Exclamation."), "This is really fun!")
 check("'I said new paragraph' is talked about", full("I said new paragraph, not that."), "I said new paragraph, not that.")
+check("undo phrases", [is_undo(x) for x in ["Scratch that.", "Undo that line", "undo", "Delete the last sentence.", "Remove that."]], [True] * 5)
+check("not undo phrases", [is_undo(x) for x in ["Undo that file change", "Please delete that.", "scratch that and write it again"]], [False] * 3)
 check("fused address outside email context", full("Visit whatever.com today"), "Visit whatever.com today")
 
 d = tempfile.mkdtemp()

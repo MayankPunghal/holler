@@ -20,7 +20,7 @@ FILLERS = {"um", "umm", "uh", "uhh", "uhm", "er", "erm", "hmm", "hmmm", "mm", "m
 STRONG_CUES = [
     "no no no wait", "no no wait", "no wait", "wait no", "actually no", "no sorry",
     "sorry i mean", "no i mean", "or rather", "i meant", "correction",
-    "scratch that", "strike that", "let me rephrase", "let me correct that",
+    "scratch that", "strike that", "undo that", "let me rephrase", "let me correct that",
     "make that", "change that to", "no actually", "wait actually", "hang on",
     "oops", "my bad", "no it's", "no it is",
 ]
@@ -29,7 +29,7 @@ STRONG_CUES = [
 WEAK_CUES = ["sorry", "i mean", "wait wait", "no no", "okay wait", "ok wait", "oh wait", "um wait",
              "hold on", "wait"]
 
-SCRATCH = {"scratch that", "strike that"}
+SCRATCH = {"scratch that", "strike that", "undo that"}
 LITERAL_BEFORE = {"say", "says", "said", "saying", "phrase", "word", "words", "keyword", "keywords", "command",
                   "type", "typed", "write", "wrote"}
 STOP1 = {"the", "a", "an", "to", "of", "in", "on", "at", "for", "and", "or", "but", "is", "it", "i", "we", "you",

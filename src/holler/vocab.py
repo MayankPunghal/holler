@@ -339,7 +339,7 @@ class Vocab:
                         break
             if ordinary:
                 if not ctx:
-                    return (f"not learned: {wrong} and {right} are both ordinary words; replacing one with the "
+                    return (f"not learned: '{wrong}' and '{right}' are ordinary words, so replacing one with the "
                             "other everywhere would break text where you meant it")
                 n = self._confirmations(f"{ctx[0].lower()} => {ctx[1]}", source)
                 if n < 2:
