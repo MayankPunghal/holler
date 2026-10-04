@@ -149,6 +149,15 @@ def test_whisper_engine_initial_prompt_and_echo_filter():
         got["reply"] = "hello"
         plain(np.zeros(16000, dtype=np.float32), None, None)
         assert "initial_prompt" not in got
+        # a model that collapses to "." with a glossary is retried without it
+        calls = []
+
+        def fussy(audio, **kw):
+            calls.append(dict(kw))
+            return iter([Seg("." if "hotwords" in kw else "main kal aaunga")]), types.SimpleNamespace(language="en")
+        plain.m.transcribe = fussy
+        text, _ = plain(np.zeros(16000 * 3, dtype=np.float32), "en", ["Kubernetes", "SourceFuse"])
+        assert text == "main kal aaunga" and len(calls) == 2 and "hotwords" not in calls[1]
     finally:
         del sys.modules["faster_whisper"]
 

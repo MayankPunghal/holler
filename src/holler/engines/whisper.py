@@ -45,14 +45,7 @@ class WhisperEngine:
         import gc
         gc.collect()
 
-    def __call__(self, audio, lang, keywords):
-        self.ensure()
-        self.last_used = time.time()
-        kwargs = {}
-        if keywords:
-            kwargs["hotwords"] = ", ".join(keywords)
-        if self.initial_prompt:
-            kwargs["initial_prompt"] = self.initial_prompt
+    def _run(self, audio, lang, kwargs):
         segs, info = self.m.transcribe(
             audio,
             language=("en" if self.english_only else lang),
@@ -63,7 +56,21 @@ class WhisperEngine:
             condition_on_previous_text=False,
             **kwargs,
         )
-        text = " ".join(s.text.strip() for s in segs).strip()
+        return " ".join(s.text.strip() for s in segs).strip(), info
+
+    def __call__(self, audio, lang, keywords):
+        self.ensure()
+        self.last_used = time.time()
+        kwargs = {}
+        if keywords:
+            kwargs["hotwords"] = ", ".join(keywords)
+        if self.initial_prompt:
+            kwargs["initial_prompt"] = self.initial_prompt
+        text, info = self._run(audio, lang, kwargs)
+        if kwargs and not any(c.isalnum() for c in text) and len(audio) > TARGET_SR:
+            # Some models (fine-tuned ones especially) collapse to "." when given a glossary or style prompt
+            # they were never trained with. Speech came in but no words came out: try once without the hints.
+            text, info = self._run(audio, lang, {})
         self.last_used = time.time()
         low = text.lower().strip(" .!,")
         if len(audio) < TARGET_SR * 2 and low in HALLUCINATIONS:

@@ -21,6 +21,7 @@
 - Changelog link on the PyPI page.
 
 **Fixed**
+- Custom and fine-tuned models that return only "." when given your vocabulary as a hint are retried once without it.
 - Saving settings restarts Holler reliably, also when Settings was opened from the tray (the restart used to close Settings itself before Holler could start again); Settings confirms Holler is back up.
 - A dictation containing ₹ or Hindi text could be lost: printing it to the log failed on Windows' default encoding.
 - "…, actually scratch that, …" drops the whole phrase before it, so "my email is X, actually scratch that, it's Y" keeps only Y.
