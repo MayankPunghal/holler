@@ -108,3 +108,18 @@ def mask_win():
         kb.release(k)
     except Exception:
         pass
+
+
+def foreground_title() -> str:
+    """Title of the window that receives keystrokes (Windows only; for diagnostics)."""
+    if sys.platform != "win32":
+        return ""
+    try:
+        import ctypes
+        u = ctypes.windll.user32
+        h = u.GetForegroundWindow()
+        buf = ctypes.create_unicode_buffer(256)
+        u.GetWindowTextW(h, buf, 256)
+        return buf.value
+    except Exception:
+        return ""

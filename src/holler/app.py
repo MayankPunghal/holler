@@ -13,7 +13,7 @@ from .engines import make_engine
 from .keys import GROUPS, Combo, key_id, K
 from difflib import SequenceMatcher
 
-from .output import MASK_VK, backspace, beep, copy_selection, mask_win, paste
+from .output import MASK_VK, backspace, beep, copy_selection, foreground_title, mask_win, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
 from .vocab import Vocab, align
@@ -180,6 +180,8 @@ class App:
             self.last_undo = time.time()
             text, _ = self.pasted.pop()
             self._wait_released()
+            print(f"Undo: sending {len(text)} Backspaces to window '{foreground_title()}', keys still held: "
+                  f"{[getattr(k, 'name', k) for k in self.held]}", flush=True)
             self.synth = True
             try:
                 backspace(len(text))
