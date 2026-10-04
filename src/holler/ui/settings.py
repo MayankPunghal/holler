@@ -74,6 +74,7 @@ class General(ttk.Frame):
 
         self.bools = {}
         for key, text in (("cleanup", "Remove fillers and resolve spoken corrections (\"Monday, no wait, Tuesday\")"),
+                          ("voice_undo", "Say \"scratch that\" on its own to remove the last dictation"),
                           ("spoken_commands", "Spoken commands: a stand-alone \"new line\", \"question mark\", \"open bracket\"..."),
                           ("smart_format", "Smart formatting: 25%, \u20b9500, john@example.com, main.py"),
                           ("auto_vocab", "Add names and terms I say often to my vocabulary automatically"),
