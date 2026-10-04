@@ -135,7 +135,7 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | Quick tap, or a shortcut such as Ctrl+C or Ctrl+Win+Left | Nothing (that's what the hold delay is for) |
 | Press **Esc** while holding | Cancels the recording |
 | Fix a mistake by hand, then hold **Ctrl+Shift+Win** for a moment | Holler learns the correction |
-| Hold **Ctrl+Shift+Z**, or say "scratch that" on its own | Undo: the last dictation is deleted |
+| Press **F8**, or say "scratch that" on its own | Undo: the last dictation is deleted |
 | Click the tray icon | Settings, pause, quit |
 
 **The status pill** appears while you speak: a live waveform when listening, then "transcribing", and a check mark when the text is in. It also reports a muted or missing microphone instead of silently doing nothing.
@@ -170,7 +170,7 @@ Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon
 | "github dot com slash holler" | `github.com/holler` |
 | "edit main dot py" | `main.py` |
 
-**Undo.** Hold **Ctrl+Shift+Z** (the `undo_key` setting; blank turns it off) or say "scratch that" as a whole dictation. Holler deletes the last pasted text by sending Backspace for each character, so it assumes the cursor is where the dictation ended. You can undo several dictations in a row, up to 10 and within 10 minutes. It does nothing if you have `enter: true`.
+**Undo.** Press **F8** (the `undo_key` setting; blank turns it off). Holler can't stop a key from also reaching the app you are typing in, so pick a key the app does nothing with (avoid letter shortcuts such as Ctrl+Shift+Z, which many editors treat as Redo, and chords with Alt, which open menus). Saying "scratch that" as a whole dictation does the same. Holler deletes the last pasted text by sending Backspace for each character, so it assumes the cursor is where the dictation ended. You can undo several dictations in a row, up to 10 and within 10 minutes. It does nothing if you have `enter: true`.
 
 **Punctuation comes from how you speak.** Whisper decides between `.`, `?` and `!` from your wording and intonation, so a question needs a rising tone and a statement a falling one. Short, clearly paced sentences give the best results, and spoken commands give you exact control where it matters.
 
@@ -210,7 +210,7 @@ Most settings are in the **Settings** window (open it with `py -m holler`). Ever
 |---|---|---|
 | `key` | `ctrl+win` | Key or chord to hold while speaking |
 | `hold_ms` | `350` | Hold time before recording starts (0 = instantly) |
-| `undo_key` | `ctrl+shift+z` | Chord that undoes the last dictation (blank = off) |
+| `undo_key` | `f8` | Chord that undoes the last dictation (blank = off) |
 | `teach_key` | `ctrl+shift+win` | Chord that learns from the correction on the current line |
 | `engine` | `whisper` | Speech engine: `whisper`, or `parakeet` (optional extra) |
 | `model` | `small.en` | Model name, Hugging Face repo id, or a local folder (see [Speech models](#speech-models)) |

@@ -4,7 +4,7 @@
 - Fixes: releasing Ctrl and Win unevenly no longer opens the Start menu; AltGr counts as Alt in chords; adding the undo chord while recording drops the recording and undoes; "at the rate" and "at sign" make `@`; "name at domain.com" becomes an email in mail context; commands also work at the end of a clause; dots inside words (`Program.cs`) are no longer treated as sentence ends; the pill says "Learned" after an auto-learn.
 - Short clips (under 2.5 s) are decoded without the glossary, which skewed words such as "First line" into "FirstLine"; undo shows "Release to undo", waits for the keys to come up and checks the real key state with Windows.
 - Reliability: Holler now runs under a small supervisor that restarts it if it crashes; it renews the keyboard hook and reopens the microphone after sleep/resume or when they stop responding; output goes to `holler.log` and hard crashes to `crash.log` in the data folder.
-- Undo: press Ctrl+Shift+Z (`undo_key`) or say "scratch that" on its own to delete the last dictation.
+- Undo: press F8 (`undo_key`; a key the app ignores, because Holler cannot stop the key reaching the app) or say "scratch that" on its own to delete the last dictation.
 - Spoken commands (`spoken_commands`): stand-alone "new line", "new paragraph", "question mark", "open bracket" and more become symbols.
 - Smart formatting (`smart_format`): `25%`, `₹500`, `john@example.com`, `github.com/holler`, `main.py`.
 - Self-improvement: undo + dictate again learns the correction (`auto_learn`); terms you say often (3+ times) are added to your vocabulary automatically as glossary-only entries (`auto_vocab`). `holler suggest` previews them and `holler try TEXT` shows what a sentence would paste.

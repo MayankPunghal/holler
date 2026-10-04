@@ -284,7 +284,7 @@ check("different sentence after undo is not learned", "two =>" not in rep and "2
 pending = rep
 check("undo then redo teaches the correction (seen twice)", "flurb => blurb" in rep)
 
-# 14. the default undo chord Ctrl+Shift+Z (not modifier-only: fires on Z, waits for the keys to come up)
+# 14. a non-modifier undo key chord (fires on the last key, waits for the keys to come up)
 from holler.keys import Combo  # noqa: E402
 app.undo_combo = Combo("ctrl+shift+z")
 dictate("Undo me with the default chord.")
