@@ -149,10 +149,10 @@ T = KeyCode(char="\x14", vk=84)          # what Windows reports for T while Ctrl
 # 1. Ctrl+Win held -> dictation pasted
 RAW["v"] = "Hello world this is a test."
 feed(0.0, 10)
-app.on_press(CTRL); app.on_press(WIN); time.sleep(0.3); feed(0.1, 20)
+app.on_press(CTRL); app.on_press(WIN); time.sleep(0.3); feed(0.1, 50)
 app.on_release(WIN); app.on_release(CTRL); time.sleep(0.7)
 check("chord dictation is pasted", log_lines() and log_lines()[-1].split("\t")[2] == "Hello world this is a test.")
-check("hotwords/glossary passed to whisper", "hotwords" in WhisperModel.seen["kw"])
+check("hotwords/glossary passed to whisper on a normal-length clip", "hotwords" in WhisperModel.seen["kw"])
 n = len(log_lines())
 
 # 2. tap does nothing

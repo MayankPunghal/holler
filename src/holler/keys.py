@@ -88,3 +88,26 @@ def spec_from_keys(keys) -> str:
     order = {"ctrl": 0, "alt": 1, "shift": 2, "win": 3}
     uniq = sorted(set(names), key=lambda n: (order.get(n, 9), n))
     return "+".join(uniq)
+
+
+_WIN_VK = {"ctrl": 0x11, "ctrl_l": 0xA2, "ctrl_r": 0xA3, "alt": 0x12, "alt_l": 0xA4, "alt_r": 0xA5, "alt_gr": 0xA5,
+           "shift": 0x10, "shift_l": 0xA0, "shift_r": 0xA1, "cmd": 0x5B, "cmd_l": 0x5B, "cmd_r": 0x5C}
+
+
+def physically_down(kid):
+    """Is this key really held right now? None if unknown (non-Windows, or a key we can't map).
+    The keyboard hook can miss a release (sleep, lock screen, injected keys), which would leave Holler
+    believing a key is still held; asking Windows directly keeps its picture honest."""
+    import sys
+    if sys.platform != "win32":
+        return None
+    vk = _WIN_VK.get(getattr(kid, "name", None))
+    if vk is None and isinstance(kid, int):
+        vk = kid
+    if vk is None:
+        return None
+    try:
+        import ctypes
+        return bool(ctypes.windll.user32.GetAsyncKeyState(vk) & 0x8000)
+    except Exception:
+        return None

@@ -10,7 +10,7 @@ from .suggest import auto_add
 from .spoken import apply_commands, is_undo, smart_format
 from . import models
 from .engines import make_engine
-from .keys import GROUPS, Combo, key_id, K
+from .keys import GROUPS, Combo, key_id, K, physically_down
 from .output import MASK_VK, backspace, beep, copy_selection, foreground_title, mask_win, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
@@ -75,10 +75,16 @@ class App:
                 print(models.manual_instructions(a.model), flush=True)
 
     # ------------------------------------------------------------------ dictation
+    def _prune_held(self):
+        """Forget keys Windows says are no longer down (a missed key-up must not leave a chord 'held')."""
+        for k in list(self.held):
+            if physically_down(k) is False:
+                self.held.discard(k)
+
     def _wait_released(self, timeout=1.5):
         """Don't send Ctrl+V while a chord key (e.g. Win) is still physically down: Win+V is clipboard history."""
         t0 = time.time()
-        while time.time() - t0 < timeout and any(self.talk.includes(k) or self.teach_combo.includes(k) or (self.undo_combo and self.undo_combo.includes(k)) for k in self.held):
+        while time.time() - t0 < timeout and (self._prune_held() or True) and any(self.talk.includes(k) or self.teach_combo.includes(k) or (self.undo_combo and self.undo_combo.includes(k)) for k in self.held):
             time.sleep(0.02)
 
     def finish(self):
@@ -95,7 +101,9 @@ class App:
                 return
             self.overlay.set("transcribing")
             self.vocab.refresh_if_changed()
-            keywords = (self.vocab.prompt_terms() or []) + self.extra_terms or None
+            keywords = (self.vocab.prompt_terms(350) or []) + self.extra_terms or None
+            if len(audio) < A.TARGET_SR * 2.5:
+                keywords = None                    # on short clips a glossary skews the words ("First line" -> "FirstLine")
             with self.busy:
                 raw, lang = self.engine(audio, a.lang, keywords)
             if a.spoken_commands and is_undo(raw):             # "scratch that" on its own: remove the last dictation
@@ -162,7 +170,7 @@ class App:
             print("Auto-learn:", m, flush=True)
         return bool(msgs)
 
-    def undo(self):
+    def undo(self, wait=1.5):
         """Delete the last pasted dictation (assumes the cursor hasn't moved since)."""
         try:
             while self.pasted and time.time() - self.pasted[-1][1] > 600:
@@ -175,7 +183,7 @@ class App:
                 return
             self.last_undo = time.time()
             text, _ = self.pasted.pop()
-            self._wait_released()
+            self._wait_released(wait)
             print(f"Undo: sending {len(text)} Backspaces to window '{foreground_title()}', keys still held: "
                   f"{[getattr(k, 'name', k) for k in self.held]}", flush=True)
             self.synth = True
@@ -254,7 +262,8 @@ class App:
     def _start_undo_timer(self):
         def fire():
             if self.undo_combo.complete(self.held) and not self.down and time.time() - self.last_undo > 1.5:
-                self.undo()
+                self.overlay.set("undoarmed")             # feedback: the chord was recognised, now let go
+                self.undo(wait=4.0)
         t = threading.Timer(max(self.hold_s, 0.3), fire)
         t.daemon = True
         self.undo_timer = t
@@ -288,6 +297,7 @@ class App:
                 self.rec.discard()
                 self.overlay.set("cancelled")
             return
+        self._prune_held()
         was_talk, was_teach = self.talk.complete(self.held), self.teach_combo.complete(self.held)
         was_undo = bool(self.undo_combo and self.undo_combo.complete(self.held))
         self.held.add(kid)
