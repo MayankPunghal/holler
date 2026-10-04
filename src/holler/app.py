@@ -7,11 +7,11 @@ import time
 from . import audio as A
 from .cleanup import clean
 from .suggest import auto_add
-from .spoken import apply_commands, smart_format
+from .spoken import apply_commands, is_undo, smart_format
 from . import models
 from .engines import make_engine
 from .keys import GROUPS, Combo, key_id, K, _vk_of, physically_down
-from .output import beep, copy_selection, paste
+from .output import backspace, beep, copy_selection, foreground_window, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
 from .vocab import Vocab, align
@@ -41,6 +41,7 @@ class App:
         self.engine = None
         self.rec = None
         self.recent = []                     # recent dictations, newest last (for learning a correction)
+        self.pasted = []                     # (text, window) of pastes nothing has touched since, newest last
         self.paused = False
         self.teach_timer = None
         self.n_dictations = 0
@@ -112,6 +113,10 @@ class App:
                 keywords = None                    # on short clips a glossary skews the words ("First line" -> "FirstLine")
             with self.busy:
                 raw, lang = self.engine(audio, a.lang, keywords)
+            if a.voice_undo and is_undo(raw):
+                print(f"[{lang}] {raw}  =>  (undo)", flush=True)
+                self.undo()
+                return
             text = self.vocab.apply(raw)
             if a.cleanup:
                 text = clean(text)
@@ -141,6 +146,11 @@ class App:
                 time.sleep(0.1)
             finally:
                 self.synth = False
+            if a.enter:
+                self.pasted = []                           # Enter sent the text somewhere: never undo that
+            else:
+                self.pasted = (self.pasted + [(out, foreground_window())])[-10:]
+                self.undo_block = ""
             self.overlay.set("done")
             if a.sound:
                 beep("stop")
@@ -154,6 +164,40 @@ class App:
                 print("Auto-vocabulary: added", t, flush=True)
         except Exception:
             log_error("auto-vocab")
+
+    def _touched(self, why):
+        """You typed, clicked or switched windows: the cursor may have moved, so undo must not delete anything."""
+        if self.pasted:
+            self.pasted = []
+            self.undo_block = why
+
+    def undo(self):
+        """Remove the last dictation with Backspace, but only if nothing has happened since it was pasted
+        (no key typed, no mouse click, same window). Otherwise it refuses rather than deleting the wrong text."""
+        try:
+            if not self.pasted:
+                why = getattr(self, "undo_block", "") or "nothing to undo"
+                print(f"Undo: not done ({why}).", flush=True)
+                self.overlay.set("noundo")
+                return
+            text, win = self.pasted[-1]
+            if win is not None and foreground_window() != win:
+                print("Undo: not done (a different window is active).", flush=True)
+                self.overlay.set("noundo")
+                return
+            self.pasted.pop()
+            self._wait_released()
+            time.sleep(0.15)
+            self.synth = True
+            try:
+                backspace(len(text))
+            finally:
+                self.synth = False
+            print(f"Undo: removed {text.strip()!r}.", flush=True)
+            self.overlay.set("undone")
+        except Exception:
+            log_error("undo")
+            self.overlay.set("error")
 
     def _match_edit(self, sel):
         """Find which recent dictation the copied text is a corrected version of. The copy may be a whole
@@ -300,6 +344,8 @@ class App:
         was_talk, was_teach = self.talk.complete(self.held), self.teach_combo.complete(self.held)
         self.held.add(kid)
         self.held_t.setdefault(kid, time.time())
+        if not self.talk.includes(kid) and not self.teach_combo.includes(kid):
+            self._touched("you typed since")
         if self.teach_combo.complete(self.held) and not was_teach:
             self._interrupt_recording()
             if self.teach_combo.modifier_only:            # hold it briefly, like the dictation chord
@@ -367,6 +413,14 @@ class App:
             kw["win32_event_filter"] = self._filter
         self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release, **kw)
         self.listener.start()
+        try:                                               # a click can move the cursor: undo must not guess
+            from pynput import mouse
+            if getattr(self, "mouse", None) is not None:
+                self.mouse.stop()
+            self.mouse = mouse.Listener(on_click=lambda x, y, b, pressed: pressed and self._touched("you clicked since"))
+            self.mouse.start()
+        except Exception:
+            self.mouse = None
 
     def watchdog(self):
         """Auto-stop at the recording limit; free the model's memory when idle; keep the keyboard hook and the

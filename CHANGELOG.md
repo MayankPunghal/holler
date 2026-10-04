@@ -9,6 +9,7 @@
 - Short clips (under 2.5 s) are transcribed without the vocabulary glossary, which skewed short phrases ("First line" became "FirstLine").
 
 **Added**
+- Undo by voice (`voice_undo`): "scratch that", "undo that", "delete that" and similar, said as a dictation on its own, remove the last dictation. It refuses if you typed, clicked or switched windows since the paste, so it never deletes the wrong text. Talking about the phrase ("say scratch that") is left as text.
 - Spoken commands (`spoken_commands`, on by default): "new line", "new paragraph", "question mark", "exclamation (mark)", "full stop", "comma", "colon", "open/close bracket", "open/close quote" and more become symbols when said on their own or at the end of a clause. A phrase being talked about ("add a new line", "I said new paragraph") is left alone.
 - Smart formatting (`smart_format`, on by default): "twenty five percent" → `25%`, "five hundred rupees" → `₹500`, "john at example dot com" or "john at the rate example dot com" → `john@example.com`, "github dot com slash holler" → `github.com/holler`, "main dot py" → `main.py`. Email addresses that Whisper writes oddly (`johnatexample.com`, `emailidjohnatexample.com`, or `john.example.com` after "my email id is") are repaired.
 - Learning a correction works on a selected fragment, on a wrapped line holding several dictations, and for any of the last 10 dictations.

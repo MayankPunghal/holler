@@ -319,5 +319,24 @@ app._filter(0x0100, D(flags=0, vkCode=0x4C)); app._filter(0x0101, D(flags=0, vkC
 check("a plain L is typed normally", FL.n == 0)
 app.listener = None
 
+# 16. voice undo: "scratch that" alone removes the last dictation, but never after you typed or clicked
+appmod.paste = _orig_paste
+app.teach_combo = Combo("ctrl+shift+l")
+dictate_cs("Keep this line.")
+dictate_cs("Remove this line.")
+del EVENTS[:]
+dictate_cs("Scratch that.")
+n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
+check("'scratch that' alone removes exactly the last dictation", n_bs == len("Remove this line. "))
+del EVENTS[:]
+dictate_cs("Undo that.")
+n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
+check("'undo that' removes the one before", n_bs == len("Keep this line. "))
+dictate_cs("Another line.")
+app.on_press(KeyCode(char="x", vk=88)); app.on_release(KeyCode(char="x", vk=88))      # you typed something
+del EVENTS[:]
+dictate_cs("Scratch that.")
+check("after typing, undo refuses instead of deleting", not any(w == "press backspace" for _, w in EVENTS))
+
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)

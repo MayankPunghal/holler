@@ -30,6 +30,8 @@ WEAK_CUES = ["sorry", "i mean", "wait wait", "no no", "okay wait", "ok wait", "o
              "hold on", "wait"]
 
 SCRATCH = {"scratch that", "strike that"}
+LITERAL_BEFORE = {"say", "says", "said", "saying", "phrase", "word", "words", "keyword", "keywords", "command",
+                  "type", "typed", "write", "wrote"}
 STOP1 = {"the", "a", "an", "to", "of", "in", "on", "at", "for", "and", "or", "but", "is", "it", "i", "we", "you",
          "so", "that", "this", "with", "as", "my", "be", "are", "was", "do", "if", "then", "from", "by"}
 LOOSE_CUES = {"wait", "hold on", "okay wait", "ok wait", "oh wait", "um wait"}
@@ -153,6 +155,9 @@ def resolve_corrections(tokens):
         if not hit:
             return tokens
         i, n, strong, cue = hit
+        if i > 0 and norms[i - 1] in LITERAL_BEFORE:      # "say scratch that to undo": talking about the phrase
+            scan = i + n
+            continue
         b = i
         while b > 0 and norms[b - 1] == "no":  # swallow "no no no ... wait"
             b -= 1

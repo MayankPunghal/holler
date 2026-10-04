@@ -85,3 +85,22 @@ def copy_selection(whole_line: bool = False) -> str:
         pyperclip.copy(old)
     return sel
 
+
+
+def backspace(n: int):
+    """Delete n characters before the cursor (used to undo the last dictation)."""
+    for _ in range(max(0, n)):
+        kb.press(keyboard.Key.backspace)
+        kb.release(keyboard.Key.backspace)
+        time.sleep(0.008)          # some apps drop keystrokes that arrive too fast
+
+
+def foreground_window():
+    """Handle of the window that receives keystrokes (Windows), else None."""
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        return int(ctypes.windll.user32.GetForegroundWindow())
+    except Exception:
+        return None

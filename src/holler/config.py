@@ -22,6 +22,7 @@ DEFAULTS = {
     "paste": "ctrl+v",           # ctrl+v | ctrl+shift+v | type
     "enter": False,              # press Enter after each dictation
     "trailing_space": True,
+    "voice_undo": True,          # say "scratch that" (or "undo that", "delete that"...) on its own to remove the last dictation
     "spoken_commands": True,     # "new line", "question mark" ... as stand-alone phrases become symbols
     "smart_format": True,        # "twenty five percent" -> 25%, "john at example dot com" -> john@example.com
     "auto_vocab": True,          # add names/identifiers you dictate often to your vocabulary, automatically

@@ -135,6 +135,7 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | Quick tap, or a shortcut such as Ctrl+Shift+T or Ctrl+Shift+Arrow | Nothing (that's what the hold delay is for) |
 | Press **Esc** while holding | Cancels the recording |
 | Fix a mistake by hand, then press **Ctrl+Shift+L** | Holler learns the correction |
+| Say "scratch that" (or "undo that", "delete that") as a dictation on its own | The last dictation is removed |
 | Click the tray icon | Settings, pause, quit |
 
 **The status pill** appears while you speak: a live waveform when listening, then "transcribing", and a check mark when the text is in. It also reports a muted or missing microphone instead of silently doing nothing.
@@ -158,6 +159,8 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | "Total, colon, five hundred rupees" | "Total: ₹500" |
 
 Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon`, `open/close quote`, `slash`, `underscore`, `at sign`, `hashtag`. `new line`, `new paragraph`, `question mark` and `exclamation mark` also work at the end of a clause ("it grew by 25% new paragraph, send it..."). A phrase being talked about ("add a new line to the file", "the question mark") is left alone.
+
+**Undo by voice.** Say "scratch that" as a dictation on its own (also "undo", "undo that", "delete that", "strike that", "remove that", "erase that") and Holler removes the last dictation with Backspace. Say it again to remove the one before. It only does this when nothing has happened since the paste: if you typed a key, clicked, or switched windows, the cursor may have moved, so it refuses ("Nothing to undo here") instead of deleting the wrong text. Inside a longer dictation, "scratch that" means "drop what I just said" ("Send it to Rahul, scratch that, send it to Priya" gives "Send it to Priya"; at the end it drops the sentence before it). Talking about the phrase ("to undo, say scratch that") leaves it alone. Turn voice undo off with `voice_undo: false`.
 
 **Smart formatting** (on by default; `smart_format: false` turns it off):
 
@@ -221,6 +224,7 @@ Most settings are in the **Settings** window (open it with `py -m holler`). Ever
 | `paste` | `ctrl+v` | `ctrl+v`, `ctrl+shift+v` (Linux terminals) or `type` (keystroke by keystroke, for apps that block paste) |
 | `enter` | `false` | Press Enter after each dictation |
 | `trailing_space` | `true` | Add a space after each dictation |
+| `voice_undo` | `true` | "scratch that" on its own removes the last dictation |
 | `spoken_commands` | `true` | Stand-alone "new line", "question mark" and similar become symbols |
 | `smart_format` | `true` | `25%`, `₹500`, `john@example.com`, `main.py` |
 | `auto_vocab` | `true` | Add terms you dictate often to the vocabulary automatically |

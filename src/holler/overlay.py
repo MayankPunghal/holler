@@ -44,6 +44,8 @@ STATES = {
     "error":        ("text",  RED,   "Error - see dictation_errors.log", 3.5),
     "learned":      ("text",  GREEN, "Learned",                    1.6),
     "nothing":      ("text",  GREY,  "Nothing new to learn",       1.6),
+    "undone":       ("text",  GREY,  "Removed the last dictation", 1.4),
+    "noundo":       ("text",  GREY,  "Nothing to undo here",       1.6),
     "nomatch":      ("text",  GREY,  "Select the corrected sentence first", 2.4),
 }
 

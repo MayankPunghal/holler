@@ -8,6 +8,8 @@ CASES = [
     ("Meet at 3 no wait 4 no wait 5", "Meet at 5"),
     ("Send the report to John scratch that send it to Priya", "Send it to Priya"),
     ("This is line one. Line No. 2, scratch that.", "This is line one."),
+    ("To undo, say scratch that on its own.", "To undo, say scratch that on its own."),
+    ("The keyword scratch that removes the line.", "The keyword scratch that removes the line."),
     ("OK, so scratch that.", ""),
     ("First point is done. The second one is wrong, scratch that", "First point is done."),
     ("I went to the store, no no no wait, the market.", "I went to the market."),
