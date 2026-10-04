@@ -35,3 +35,37 @@ def suggest(log_path: str, known, min_count: int = 3, limit: int = 30):
             count[w.lower()] += 1
             spelling.setdefault(w.lower(), w)
     return [(spelling[w], n) for w, n in count.most_common(limit) if n >= min_count]
+
+
+MAX_AUTO = 60
+
+
+def auto_add(log_path: str, vocab, min_count: int = 3):
+    """Add the suggested terms to the vocabulary as glossary-only entries (`~term`: they bias the speech engine
+    but never rewrite your text). Capped so the list can't grow without bound. Returns the terms added."""
+    have = vocab.keyword_list()
+    if sum(1 for k in have if k.startswith("~") and k.lstrip("~") in _auto_marker(vocab)) >= MAX_AUTO:
+        return []
+    added = []
+    for term, _ in suggest(log_path, have, min_count):
+        if vocab.add_keyword("~" + term):
+            added.append(term)
+            _auto_marker(vocab, add=term)
+    return added
+
+
+def _auto_marker(vocab, add=None):
+    """Terms added automatically, remembered next to the vocabulary files so the cap counts only them."""
+    import os
+    path = os.path.join(os.path.dirname(vocab.kw_path), "auto_vocab.txt")
+    try:
+        have = set(open(path, encoding="utf-8").read().split("\n"))
+    except OSError:
+        have = set()
+    if add:
+        have.add(add)
+        try:
+            open(path, "w", encoding="utf-8").write("\n".join(sorted(h for h in have if h)))
+        except OSError:
+            pass
+    return have

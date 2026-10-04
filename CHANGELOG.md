@@ -4,7 +4,7 @@
 - Undo: hold Ctrl+Alt+Win (`undo_key`) or say "scratch that" on its own to delete the last dictation.
 - Spoken commands (`spoken_commands`): stand-alone "new line", "new paragraph", "question mark", "open bracket" and more become symbols.
 - Smart formatting (`smart_format`): `25%`, `₹500`, `john@example.com`, `github.com/holler`, `main.py`.
-- Self-improvement: undo + dictate again learns the correction (`auto_learn`); `holler suggest [--add]` finds terms you say often that are missing from your vocabulary.
+- Self-improvement: undo + dictate again learns the correction (`auto_learn`); terms you say often (3+ times) are added to your vocabulary automatically as glossary-only entries (`auto_vocab`). `holler suggest` previews them and `holler try TEXT` shows what a sentence would paste.
 - Starter vocabulary packs (web, cloud-devops, dotnet, python-data, general-tech) are seeded on first run, so Holler is useful out of the box. New `holler packs` and `holler import --pack NAME`.
 - README: how the vocabulary is built, import example.
 

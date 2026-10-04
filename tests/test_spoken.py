@@ -52,5 +52,13 @@ got = dict(suggest(log, ["kubernetes"]))
 check("suggests repeated unusual terms", sorted(got), ["Zorbify", "order_id"])
 check("skips known terms", dict(suggest(log, ["~Zorbify"])).get("Zorbify"), None)
 
+from holler.vocab import Vocab  # noqa: E402
+from holler.suggest import auto_add  # noqa: E402
+vd = tempfile.mkdtemp()
+v = Vocab(vd)
+check("auto_add adds glossary-only terms", sorted(auto_add(log, v)), ["Zorbify", "order_id"])
+check("auto_add is idempotent", auto_add(log, v), [])
+check("auto terms are glossary-only", "~Zorbify" in v.keyword_list(), True)
+
 print("ALL OK" if not bad else f"{bad} FAILED")
 sys.exit(1 if bad else 0)

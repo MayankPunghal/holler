@@ -25,6 +25,7 @@ DEFAULTS = {
     "trailing_space": True,
     "spoken_commands": True,     # "new line", "question mark" ... as stand-alone phrases become symbols
     "smart_format": True,        # "twenty five percent" -> 25%, "john at example dot com" -> john@example.com
+    "auto_vocab": True,          # add names/identifiers you dictate often to your vocabulary, automatically
     "auto_learn": True,          # undo + say it again: learn the difference as a correction
     "cleanup": True,             # remove fillers, resolve spoken self-corrections
     "log": True,                 # keep a local history of dictations (needed for the History tab)

@@ -5,6 +5,7 @@ import time
 
 from . import audio as A
 from .cleanup import clean
+from .suggest import auto_add
 from .spoken import apply_commands, is_undo, smart_format
 from . import models
 from .engines import make_engine
@@ -42,6 +43,7 @@ class App:
         self.teach_timer = None
         self.undo_timer = None
         self.pasted = []                     # (text, time) of recent pastes, newest last, for undo
+        self.n_dictations = 0
         self.undone = None                   # (text, time) of the dictation the user just undid
         self.tray = tray
         self.download_only = download_only
@@ -57,6 +59,8 @@ class App:
                 os._exit(0)
             self.rec = A.Recorder(lambda lv: self.overlay.set("listening", lv), pre_s=A.PRE_ROLL_S + self.hold_s, device=a.device)
             self.overlay.set("ready")
+            if a.auto_vocab:
+                threading.Thread(target=self._auto_vocab, daemon=True).start()
             hold = f" for {a.hold_ms} ms" if self.hold_s else ""
             print(f"Ready ({a.engine} {a.model}). Hold [{a.key}]{hold} and speak; release to paste. "
                   f"Esc cancels. Learn a fix: [{a.teach_key}]."
@@ -114,6 +118,9 @@ class App:
                 except OSError:
                     pass
             self._auto_learn(text)
+            self.n_dictations += 1
+            if a.auto_vocab and self.n_dictations % 20 == 0:
+                threading.Thread(target=self._auto_vocab, daemon=True).start()
             self._wait_released()
             self.synth = True
             out = text + " " if (a.trailing_space and not a.enter) else text
@@ -130,6 +137,13 @@ class App:
         except Exception:
             log_error("transcribe/paste")
             self.overlay.set("error")
+
+    def _auto_vocab(self):
+        try:
+            for t in auto_add(os.path.join(self.home, "dictation_log.tsv"), self.vocab):
+                print("Auto-vocabulary: added", t, flush=True)
+        except Exception:
+            log_error("auto-vocab")
 
     def _auto_learn(self, text):
         """Undo, then say it again: the difference between the two takes is a correction worth learning."""

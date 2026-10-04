@@ -188,7 +188,7 @@ A fix that includes a neighbouring word ("null difference" → "null reference")
 
 **It also improves by itself.**
 - **Undo and say it again.** If you undo a dictation and re-dictate within a minute, Holler compares the two takes and learns the difference as a correction, with the same safety rule as above. Turn it off with `auto_learn: false`.
-- **`holler suggest`** reads your local history for names and identifiers you dictate often (three or more times) that your vocabulary lacks. `holler suggest --add` adds them, so the speech engine is told about them.
+- **Automatic vocabulary.** Every 20 dictations (and at start-up) Holler looks at your local history for names and identifiers you dictate three or more times that your vocabulary lacks, and adds them as glossary-only entries (`~Name`), which steer the speech engine but never rewrite your text. At most 60 are added this way. Turn it off with `auto_vocab: false`. `holler suggest` shows what it would pick without adding anything.
 
 **Ready out of the box.** On first run Holler seeds your vocabulary with the examples plus starter packs for web, cloud/DevOps, .NET, Python/data and general tech work (about 170 terms and 40 corrections, such as "cube control" → `kubectl`). They are plain text files in your data folder, so edit or delete anything you don't want. List the packs with `holler packs` and re-add one with `holler import --pack web`.
 
@@ -223,6 +223,7 @@ Most settings are in the **Settings** window (open it with `py -m holler`). Ever
 | `trailing_space` | `true` | Add a space after each dictation |
 | `spoken_commands` | `true` | Stand-alone "new line", "question mark" and similar become symbols |
 | `smart_format` | `true` | `25%`, `₹500`, `john@example.com`, `main.py` |
+| `auto_vocab` | `true` | Add terms you dictate often to the vocabulary automatically |
 | `auto_learn` | `true` | Learn from undo + dictate again |
 | `cleanup` | `true` | Remove fillers and resolve spoken self-corrections |
 | `log` | `true` | Keep a local history of dictations (the History tab needs it) |
@@ -245,7 +246,8 @@ Environment variables: `HOLLER_HOME` (data folder), `HOLLER_MODEL_URL`, `HOLLER_
 | `holler settings` | Settings window |
 | `holler start` / `stop` / `restart` / `status` | Control the background instance |
 | `holler autostart on\|off\|status` | Start with the computer |
-| `holler suggest [--add]` | Find terms you dictate often that your vocabulary lacks |
+| `holler suggest [--add]` | Show terms you dictate often that your vocabulary lacks (this also happens automatically) |
+| `holler try TEXT` | Show what Holler would paste for a sentence, no microphone needed |
 | `holler doctor [--pill]` | Check prerequisites, microphone, model and hotkey, with fixes (`--pill` plays the pill through its states) |
 | `holler keys` | Print the name of each key you press |
 | `holler where` | Print the data folder |

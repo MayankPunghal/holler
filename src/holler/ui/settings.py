@@ -78,6 +78,7 @@ class General(ttk.Frame):
         for key, text in (("cleanup", "Remove fillers and resolve spoken corrections (\"Monday, no wait, Tuesday\")"),
                           ("spoken_commands", "Spoken commands: a stand-alone \"new line\", \"question mark\", \"open bracket\"..."),
                           ("smart_format", "Smart formatting: 25%, \u20b9500, john@example.com, main.py"),
+                          ("auto_vocab", "Add names and terms I say often to my vocabulary automatically"),
                           ("auto_learn", "Learn automatically when I undo a dictation and say it again"),
                           ("trailing_space", "Add a space after each dictation"),
                           ("enter", "Press Enter after each dictation"),

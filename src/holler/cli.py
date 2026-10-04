@@ -52,6 +52,8 @@ def build_parser():
     imp.add_argument("folder", nargs="?", default=None)
     imp.add_argument("--pack", default=None, help="a bundled starter pack, e.g. web (see: holler packs)")
     sub.add_parser("packs", help="list the bundled starter vocabulary packs")
+    ty = sub.add_parser("try", help="show what Holler would paste for a sentence, no microphone needed")
+    ty.add_argument("text", nargs="+")
     sg = sub.add_parser("suggest", help="find terms you dictate often that are missing from your vocabulary")
     sg.add_argument("--add", action="store_true", help="add the suggestions to your vocabulary")
     ex = sub.add_parser("export-model", help="copy a downloaded model to FOLDER, named for re-hosting as a mirror")
@@ -174,6 +176,16 @@ def main(argv=None) -> int:
             return 1
         k, r = Vocab(data_dir(), PACKAGE_DATA).import_from(folder)
         print(f"Imported {k} keyword(s) and {r} correction(s).")
+    elif cmd == "try":
+        from .cleanup import clean
+        from .paths import PACKAGE_DATA
+        from .spoken import apply_commands, smart_format
+        from .vocab import Vocab
+        c = config.settings()
+        t = Vocab(data_dir(), PACKAGE_DATA).apply(" ".join(ns.text))
+        t = clean(t) if c.cleanup else t
+        t = apply_commands(t) if c.spoken_commands else t
+        print(smart_format(t) if c.smart_format else t)
     elif cmd == "suggest":
         import os
         from .paths import PACKAGE_DATA
