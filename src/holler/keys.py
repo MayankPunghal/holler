@@ -127,6 +127,8 @@ def _vk_of(kid):
         return vk
     if isinstance(kid, int):
         return kid or None
+    if isinstance(kid, str) and len(kid) == 1 and kid.isalnum() and kid.isascii():
+        return ord(kid.upper())                  # letters and digits: the virtual-key code is the character
     if isinstance(kid, str) and len(kid) == 1:
         try:
             import ctypes

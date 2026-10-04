@@ -9,7 +9,7 @@ from .paths import data_dir
 DEFAULTS = {
     "key": "ctrl+shift",         # key or chord to hold while speaking (modifiers only: never types; no Win key)
     "hold_ms": 350,              # hold time before recording starts (0 = instantly)
-    "teach_key": "ctrl+shift+space",  # learn from the correction on the current line
+    "teach_key": "ctrl+shift+l",  # learn from the correction you selected (L is kept from the app)
     "engine": "whisper",         # speech engine (see holler.engines); only whisper is built in for now
     "model": "small.en",
     "beam": 2,
@@ -47,7 +47,7 @@ def load() -> dict:
         cfg.update({k: v for k, v in data.items() if k in DEFAULTS})
         if cfg["key"] in ("ctrl+win", "ctrl+`"):   # earlier defaults (releasing Win opens Start)
             cfg["key"] = DEFAULTS["key"]
-        if cfg["teach_key"] in ("ctrl+shift+win", "ctrl+alt+t"):      # old default: Ctrl+Alt is AltGr on many layouts and typed a character
+        if cfg["teach_key"] in ("ctrl+shift+win", "ctrl+alt+t", "ctrl+shift+space"):      # old default: Ctrl+Alt is AltGr on many layouts and typed a character
             cfg["teach_key"] = DEFAULTS["teach_key"]
     except (OSError, ValueError):
         pass

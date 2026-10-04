@@ -77,7 +77,7 @@ The first command installs Holler. The second opens the setup wizard, which chec
 sudo apt install python3-tk libportaudio2 xclip
 ```
 
-`python3-tk` is for the setup and settings windows, `libportaudio2` for microphone access and `xclip` (or `xsel`) for the clipboard. On Linux the "Win" key is the Super key, which many desktops already use, so choose another chord in Settings (for example `ctrl+shift+space` or `f9`) and use the `ctrl+shift+v` paste mode for terminals. The pill is drawn as a simple always-on-top window instead of the Windows layered pill, and the tray icon needs your desktop's AppIndicator support.
+`python3-tk` is for the setup and settings windows, `libportaudio2` for microphone access and `xclip` (or `xsel`) for the clipboard. On Linux the "Win" key is the Super key, which many desktops already use, so choose another chord in Settings (for example `ctrl+shift+l` or `f9`) and use the `ctrl+shift+v` paste mode for terminals. The pill is drawn as a simple always-on-top window instead of the Windows layered pill, and the tray icon needs your desktop's AppIndicator support.
 
 If you try Holler on Linux, please open an issue with what worked and what didn't.
 
@@ -134,7 +134,7 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | Hold **Ctrl+Shift** for about a third of a second, speak, release | The text is pasted at your cursor |
 | Quick tap, or a shortcut such as Ctrl+Shift+T or Ctrl+Shift+Arrow | Nothing (that's what the hold delay is for) |
 | Press **Esc** while holding | Cancels the recording |
-| Fix a mistake by hand, then press **Ctrl+Shift+Space** | Holler learns the correction |
+| Fix a mistake by hand, then press **Ctrl+Shift+L** | Holler learns the correction |
 | Click the tray icon | Settings, pause, quit |
 
 **The status pill** appears while you speak: a live waveform when listening, then "transcribing", and a check mark when the text is in. It also reports a muted or missing microphone instead of silently doing nothing.
@@ -171,14 +171,14 @@ Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon
 
 **Punctuation comes from how you speak.** Whisper decides between `.`, `?` and `!` from your wording and intonation, so a question needs a rising tone and a statement a falling one. Short, clearly paced sentences give the best results, and spoken commands give you exact control where it matters.
 
-**Hotkeys.** Any key or chord works: `ctrl+shift`, ``ctrl+` ``, `f9`, `scroll_lock`, `right_ctrl`. The default `ctrl+shift` is modifier keys only, so holding it never types anything, in any app or terminal, and it avoids the Win key (Windows opens the Start menu when Win is released) and Alt (which opens app menus). Shortcuts that start with Ctrl+Shift still work: pressing any other key while Holler is recording cancels the recording. If you have two keyboard layouts for the same language, Windows may use Ctrl+Shift to switch between them (Settings > Time & language > Typing > Advanced keyboard settings > Input language hot keys). Use `holler keys` to see how a key is named.
+**Hotkeys.** Any key or chord works: `ctrl+shift`, ``ctrl+` ``, `f9`, `scroll_lock`, `right_ctrl`. The default `ctrl+shift` is modifier keys only, so holding it never types anything, in any app or terminal, and it avoids the Win key (Windows opens the Start menu when Win is released) and Alt (which opens app menus). Shortcuts that start with Ctrl+Shift still work: pressing any other key while Holler is recording cancels the recording. If you have two keyboard layouts for the same language, Windows may use Ctrl+Shift to switch between them (Settings > Time & language > Typing > Advanced keyboard settings > Input language hot keys). When a chord ends in a real key, like the L in Ctrl+Shift+L, Holler keeps that key from the app, so it never types or replaces your selection. Use `holler keys` to see how a key is named.
 
 ## Teaching it your words
 
 Whisper itself doesn't learn, so Holler learns the words around it, three ways:
 
 1. **Vocabulary tab.** Add jargon and names (`xUnit`, `Kubernetes`, `Priya`) and "wrong → right" corrections. Your vocabulary is also passed to Whisper as hotwords, which biases decoding toward your terms.
-2. **Correct, then press Ctrl+Shift+Space.** Fix the wrong word by hand, select the corrected words (or just leave the cursor on that line), and press Ctrl+Shift+Space. It works for any of your last 10 dictations. Holler compares what it pasted with your fix and remembers it.
+2. **Correct, then press Ctrl+Shift+L.** Fix the wrong word by hand, select the corrected words (or just leave the cursor on that line), and press Ctrl+Shift+L. It works for any of your last 10 dictations. Holler compares what it pasted with your fix and remembers it.
 3. **History tab.** Pick a past dictation, fix the text and click *Learn*.
 
 A fix that includes a neighbouring word ("null difference" → "null reference") is learned immediately. A fix to a single ordinary word is learned after you correct it twice, so one odd correction can't break a normal word everywhere.
@@ -206,7 +206,7 @@ Most settings are in the **Settings** window (open it with `py -m holler`). Ever
 |---|---|---|
 | `key` | `ctrl+shift` | Key or chord to hold while speaking |
 | `hold_ms` | `350` | Hold time before recording starts (0 = instantly) |
-| `teach_key` | `ctrl+shift+space` | Chord that learns from the correction on the current line |
+| `teach_key` | `ctrl+shift+l` | Chord that learns from the correction on the current line |
 | `engine` | `whisper` | Speech engine: `whisper`, or `parakeet` (optional extra) |
 | `model` | `small.en` | Model name, Hugging Face repo id, or a local folder (see [Speech models](#speech-models)) |
 | `beam` | `2` | Whisper beam size (higher is slower, slightly more accurate) |

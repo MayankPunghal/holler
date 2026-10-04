@@ -10,7 +10,7 @@ from .suggest import auto_add
 from .spoken import apply_commands, smart_format
 from . import models
 from .engines import make_engine
-from .keys import GROUPS, Combo, key_id, K, physically_down
+from .keys import GROUPS, Combo, key_id, K, _vk_of, physically_down
 from .output import beep, copy_selection, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
@@ -24,6 +24,8 @@ class App:
         self.talk = Combo(cfg.key)
         self.teach_combo = Combo(cfg.teach_key)
         self.hold_s = max(0, cfg.hold_ms) / 1000.0
+        self.hot_vks = self._hotkey_vks()      # vk -> chord, for chords that end in a real key (ctrl+shift+l)
+        self.swallowing = set()                # those keys while held: the app must never see them
         self.vocab = Vocab(self.home, PACKAGE_DATA)
         self.extra_terms = [k.strip() for k in (cfg.extra_keywords or "").split(",") if k.strip()]
         self.overlay = make_overlay(cfg.overlay, cfg.key, cfg.ui, log=log_error)
@@ -227,10 +229,46 @@ class App:
         self.teach_timer = t
         t.start()
 
+    def _hotkey_vks(self):
+        mods = set().union(*GROUPS.values())
+        out = {}
+        for combo in (self.talk, self.teach_combo):
+            for slot in combo.slots:
+                if not slot <= mods:
+                    for k in slot:
+                        vk = _vk_of(k)
+                        if vk:
+                            out[vk] = combo
+        return out
+
     def _filter(self, msg, data):
-        """Windows hook filter: ignore keystrokes injected by software (Holler's own paste, other tools), so they
-        can never start a dictation or leave a 'ghost' held key. Nothing is sent or suppressed."""
-        return not (data.flags & 0x10)                     # LLKHF_INJECTED
+        """Windows hook filter. Ignores keystrokes injected by software (Holler's own paste, other tools), so they
+        can never start a dictation or leave a 'ghost' held key. And when a Holler chord ends in a real key
+        (the L of Ctrl+Shift+L), that key is kept from the app, like any global hotkey, so it can't type into
+        or replace your selection."""
+        if data.flags & 0x10:                              # LLKHF_INJECTED
+            return False
+        combo = self.hot_vks.get(data.vkCode)
+        if combo is None:
+            return True
+        from pynput import keyboard
+        vk, key = data.vkCode, keyboard.KeyCode.from_vk(data.vkCode)
+        mods = set().union(*GROUPS.values())
+        if msg in (0x0100, 0x0104):                        # key down (and auto-repeat)
+            if vk not in self.swallowing:
+                self._prune_held()
+                if not all(slot & self.held for slot in combo.slots if slot <= mods):
+                    return True                            # not our chord: an ordinary key press
+                self.swallowing.add(vk)
+                self.on_press(key)
+        elif vk in self.swallowing:                        # key up
+            self.swallowing.discard(vk)
+            self.on_release(key)
+        else:
+            return True
+        if self.listener is not None:
+            self.listener.suppress_event()
+        return False
 
     def _interrupt_recording(self):
         """A different chord was completed while recording: drop the recording."""

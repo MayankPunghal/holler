@@ -3,7 +3,7 @@
 ## 1.1.0
 
 **Changed**
-- Default keys: hold **Ctrl+Shift** to dictate (was Ctrl+Win, which opened the Start menu on release) and press **Ctrl+Shift+Space** to learn a correction (was Ctrl+Shift+Win). Saved Win-key defaults switch over automatically.
+- Default keys: hold **Ctrl+Shift** to dictate (was Ctrl+Win, which opened the Start menu on release) and press **Ctrl+Shift+L** to learn a correction (was Ctrl+Shift+Win). Holler keeps the L from the app, so it can't replace the text you selected. Saved Win-key defaults switch over automatically.
 - Pressing any other key while recording cancels the recording, so shortcuts that start with the same keys (Ctrl+Shift+T, Ctrl+Shift+Arrow) never paste anything.
 - "scratch that" at the end of a dictation removes the whole sentence before it, not just the last word.
 - Short clips (under 2.5 s) are transcribed without the vocabulary glossary, which skewed short phrases ("First line" became "FirstLine").

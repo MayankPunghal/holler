@@ -46,6 +46,10 @@ class KeyCode:
     def __init__(self, char=None, vk=None):
         self.char, self.vk = char, vk
 
+    @classmethod
+    def from_vk(cls, vk):
+        return cls(vk=vk)
+
 
 class Key:
     pass
@@ -254,7 +258,7 @@ check("default keys have no Win", "win" not in config.DEFAULTS["key"] and "win" 
 with open(config.path(), "w") as f:
     json.dump({"key": "ctrl+win", "teach_key": "ctrl+shift+win"}, f)
 c = config.load()
-check("old ctrl+win settings are migrated", c["key"] == "ctrl+shift" and c["teach_key"] == "ctrl+shift+space")
+check("old ctrl+win settings are migrated", c["key"] == "ctrl+shift" and c["teach_key"] == "ctrl+shift+l")
 
 # 13. the default chord: hold Ctrl+Shift; another key at any point during the recording makes it a shortcut
 from holler.keys import Combo  # noqa: E402
@@ -289,6 +293,31 @@ rep = open(os.path.join(app.home, "replacements.txt"), encoding="utf-8").read().
 pend = os.path.join(app.home, "replacements_pending.json")
 pending = open(pend).read().lower() if os.path.exists(pend) else ""
 check("teach works from a selected fragment of an older dictation", "flarp" in rep or "flarp" in pending)
+
+# 15. Ctrl+Shift+L: the L never reaches the app (it would replace the selection), and it triggers learning
+class FL:
+    n = 0
+
+    def suppress_event(self):
+        FL.n += 1
+
+
+app.listener = FL()
+app.hot_vks = app._hotkey_vks()
+taught = []
+app.teach = lambda: taught.append(1)
+D = types.SimpleNamespace
+app.held.clear(); app.on_press(CTRL); app.on_press(SHIFT)
+app._filter(0x0100, D(flags=0, vkCode=0x4C)); time.sleep(0.1)
+app._filter(0x0100, D(flags=0, vkCode=0x4C))           # auto-repeat
+app._filter(0x0101, D(flags=0, vkCode=0x4C))
+check("Ctrl+Shift+L is kept from the app (down, repeat, up)", FL.n == 3)
+check("Ctrl+Shift+L triggers learning once", len(taught) == 1)
+app.on_release(SHIFT); app.on_release(CTRL)
+FL.n = 0
+app._filter(0x0100, D(flags=0, vkCode=0x4C)); app._filter(0x0101, D(flags=0, vkCode=0x4C))
+check("a plain L is typed normally", FL.n == 0)
+app.listener = None
 
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)
