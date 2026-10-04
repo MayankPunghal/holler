@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1
+- `holler bench`: identifiers like `customerOrderId` are compared as the words they are spoken as; example results added to the README.
+- CI now runs the tests on Windows as well as Linux.
+
 ## 0.6.0
 - New optional engine: NVIDIA Parakeet TDT 0.6B v3 through onnx-asr (`pip install "holler[parakeet]"`, ONNX Runtime on CPU, no PyTorch). Choose it in Settings > Speech engine, or `"engine": "parakeet"` in config.json. It has no hotword biasing, so vocabulary applies through the replacement rules.
 - `holler bench` compares engines in one run: `--models small.en,parakeet:nemo-parakeet-tdt-0.6b-v3`.

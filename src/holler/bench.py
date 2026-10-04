@@ -37,7 +37,7 @@ PROMPTS = [
     "Rotate the IAM access keys, then update the secrets in Parameter Store and restart the ECS tasks.",
     "In Visual Studio, enable nullable reference types and fix the warnings in the Razor pages.",
     "The Hindi word for tomorrow is kal, but it also means yesterday, which confuses everyone.",
-    "Please summarise the quarterly report in three bullet points and email it to the team by end of day.",
+    "Please summarize the quarterly report in three bullet points and email it to the team by end of day.",
     "Run the integration tests against the staging environment before merging to main.",
     "Whisper, Parakeet and Moonshine are all speech recognition models that can run offline.",
     "After the deployment, the p ninety nine latency dropped from eight hundred milliseconds to two hundred.",
@@ -73,6 +73,7 @@ def _spell_numbers(text: str) -> str:
 
 
 def normalise(text: str) -> list[str]:
+    text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)             # customerOrderId -> customer Order Id (identifiers are spoken as words)
     text = _spell_numbers(text.lower().replace("-", " "))
     text = re.sub(r"[^a-z' ]+", " ", text)
     words = text.split()

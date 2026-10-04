@@ -22,6 +22,7 @@ def test_wer():
     assert bench.wer("at three thirty in the afternoon", "at 3:30 in the afternoon")[0] == 0
     assert bench.wer("two hundred milliseconds", "200 milliseconds")[0] == 0
     assert bench.wer("five attempts", "four attempts")[0] == 1
+    assert bench.wer("rename customerOrderId to orderId", "rename customer order ID to order ID")[0] == 0
 
 
 def test_wav_roundtrip_and_load_set():

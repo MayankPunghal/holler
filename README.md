@@ -131,6 +131,14 @@ py -m holler bench run --models small.en,base.en,small
 py -m holler bench run --models small.en,parakeet:nemo-parakeet-tdt-0.6b-v3   # after installing holler[parakeet]
 ```
 
+Example (one Indian-English speaker, 24 sentences full of jargon, CPU laptop; a small sample, so treat differences of a point or two as noise):
+
+| Model | Word error rate | Speed |
+|---|---|---|
+| `small.en` (default) | 4.9% | 2.5x faster than speaking |
+| `base.en` | 5.5% | 7.8x |
+| Parakeet TDT 0.6B v3 | 7.9% | 5.6x |
+
 It prints word error rate, speed and load time per model, and shows the clips each one got wrong. Your vocabulary is included by default (`--no-hotwords` to switch it off; `--raw` skips fixes and cleanup). You can add your own sentences as `NN.wav` + `NN.txt` in the bench folder.
 
 ## Keeping a mirror of the models you download
