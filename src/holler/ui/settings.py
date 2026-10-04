@@ -402,9 +402,17 @@ class SettingsWindow:
         process.set_autostart(bool(self.general.auto.get()))
         if process.running_pid():
             process.restart_background()
-            self.status.config(text="Saved. Holler restarted with the new settings.", style="Good.TLabel")
+            self.status.config(text="Saved. Restarting Holler...", style="Sub.TLabel")
+            self.root.after(4000, self._check_restart)
         else:
             self.status.config(text="Saved. Start Holler to use them.", style="Good.TLabel")
+
+
+    def _check_restart(self):
+        if process.running_pid():
+            self.status.config(text="Saved. Holler restarted with the new settings.", style="Good.TLabel")
+        else:
+            self.status.config(text="Saved, but Holler did not come back up. Run: py -m holler", style="Bad.TLabel")
 
 
 def run_settings() -> int:

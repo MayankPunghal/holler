@@ -64,19 +64,43 @@ def release():
         pass
 
 
+def _childfile():
+    return os.path.join(data_dir(), "holler-run.pid")
+
+
+def _kill(pid: int):
+    if sys.platform == "win32":
+        # Not /T: the Settings window may have been opened from Holler's tray, i.e. be a child of it, and must
+        # survive a restart it asked for.
+        subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, creationflags=0x08000000)
+    else:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+
+
 def stop(timeout: float = 4.0) -> bool:
-    """Stop the running instance. True if one was running."""
+    """Stop the running instance (the supervisor first, so it can't start a new one, then its dictation process).
+    True if one was running."""
     pid = running_pid()
     if not pid:
         return False
-    if sys.platform == "win32":
-        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True,
-                       creationflags=0x08000000)
-    else:
-        os.kill(pid, signal.SIGTERM)
+    try:
+        child = int(open(_childfile()).read().strip() or 0)
+    except (OSError, ValueError):
+        child = 0
+    _kill(pid)
+    if child and child != os.getpid() and _alive(child):
+        _kill(child)
     t0 = time.time()
-    while time.time() - t0 < timeout and _alive(pid):
+    while time.time() - t0 < timeout and (_alive(pid) or (child and _alive(child))):
         time.sleep(0.1)
+    for f in (_childfile(), _pidfile()):
+        try:
+            os.remove(f)
+        except OSError:
+            pass
     try:
         os.remove(_pidfile())
     except OSError:
@@ -140,7 +164,13 @@ def supervise(cmd=None, max_crashes: int = 5, window: float = 120.0, delay: floa
         if sys.platform == "win32":
             kw["creationflags"] = 0x08000000                      # no console window
         started = time.time()
-        code = subprocess.Popen(cmd, **kw).wait()
+        proc = subprocess.Popen(cmd, **kw)
+        try:
+            with open(_childfile(), "w") as f:
+                f.write(str(proc.pid))
+        except OSError:
+            pass
+        code = proc.wait()
         if code == 0:
             return 0
         now = time.time()

@@ -21,6 +21,7 @@
 - Changelog link on the PyPI page.
 
 **Fixed**
+- Saving settings restarts Holler reliably, also when Settings was opened from the tray (the restart used to close Settings itself before Holler could start again); Settings confirms Holler is back up.
 - A dictation containing ₹ or Hindi text could be lost: printing it to the log failed on Windows' default encoding.
 - "…, actually scratch that, …" drops the whole phrase before it, so "my email is X, actually scratch that, it's Y" keeps only Y.
 - Model downloads: only one download per model at a time (two at once could write a file of the right size with the wrong bytes), every downloaded file is checked against the SHA-256 that Hugging Face publishes, and the progress bar never moves backwards.
