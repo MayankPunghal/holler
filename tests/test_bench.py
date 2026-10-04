@@ -15,6 +15,13 @@ def test_wer():
     assert bench.wer("Hello, world!", "hello world") == (0, 2)
     assert bench.wer("deploy the lambda function", "deploy a lambda") == (2, 4)      # 1 substitution + 1 deletion
     assert bench.wer("one two", "") == (2, 2)
+    # how a number is written is not an error
+    assert bench.wer("returns a four hundred and four", "returns a 404")[0] == 0
+    assert bench.wer("p ninety nine latency of two thousand five hundred", "P99 latency of 2,500")[0] == 0
+    assert bench.wer("at three thirty in the afternoon", "at 3.30 in the afternoon")[0] == 0
+    assert bench.wer("at three thirty in the afternoon", "at 3:30 in the afternoon")[0] == 0
+    assert bench.wer("two hundred milliseconds", "200 milliseconds")[0] == 0
+    assert bench.wer("five attempts", "four attempts")[0] == 1
 
 
 def test_wav_roundtrip_and_load_set():

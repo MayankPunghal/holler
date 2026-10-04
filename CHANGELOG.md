@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.1
+- `holler bench`: how a number is written (`404` vs "four hundred and four", `3.30` vs "three thirty") no longer counts as an error; 12 harder prompts added (24 in all); `bench record` resumes and only asks for clips you haven't recorded.
+
 ## 0.5.0
 - Engines are now plugins (`holler.engines`): Whisper is the first, others register in `ENGINES`. New `engine` setting (default `whisper`).
 - `holler bench record` / `holler bench run --models small.en,base.en`: record a dozen sentences once, then score any models on your own voice and vocabulary (word error rate, speed, load time).

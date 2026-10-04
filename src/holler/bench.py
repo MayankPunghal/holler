@@ -29,14 +29,54 @@ PROMPTS = [
     "I think we should use PostgreSQL instead of SQL Server for the new service.",
     "Hey, can you send me the invoice for September before Friday?",
     "The quick brown fox jumps over the lazy dog, then reads the documentation.",
+    "Mayank asked Harshita to reconcile the Kubernetes ingress with the Nginx reverse proxy.",
+    "Our SourceFuse team is modernizing a legacy WCF service into a gRPC microservice on AWS Fargate.",
+    "Why does the Dockerfile copy the csproj file before running dotnet restore?",
+    "Set the retry policy to exponential backoff with a maximum of five attempts and add jitter.",
+    "Could you please rename the variable from customerOrderId to orderId across the whole solution?",
+    "Rotate the IAM access keys, then update the secrets in Parameter Store and restart the ECS tasks.",
+    "In Visual Studio, enable nullable reference types and fix the warnings in the Razor pages.",
+    "The Hindi word for tomorrow is kal, but it also means yesterday, which confuses everyone.",
+    "Please summarise the quarterly report in three bullet points and email it to the team by end of day.",
+    "Run the integration tests against the staging environment before merging to main.",
+    "Whisper, Parakeet and Moonshine are all speech recognition models that can run offline.",
+    "After the deployment, the p ninety nine latency dropped from eight hundred milliseconds to two hundred.",
 ]
 
 
 # ------------------------------------------------------------------ scoring
+_ONES = ("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen "
+         "seventeen eighteen nineteen").split()
+_TENS = "_ _ twenty thirty forty fifty sixty seventy eighty ninety".split()
+
+
+def _int_words(n: int) -> list[str]:
+    if n < 20:
+        return [_ONES[n]]
+    if n < 100:
+        return [_TENS[n // 10]] + ([_ONES[n % 10]] if n % 10 else [])
+    if n < 1000:
+        return [_ONES[n // 100], "hundred"] + (_int_words(n % 100) if n % 100 else [])
+    if n < 1_000_000:
+        return _int_words(n // 1000) + ["thousand"] + (_int_words(n % 1000) if n % 1000 else [])
+    return [str(n)]
+
+
+def _spell_numbers(text: str) -> str:
+    """'404' -> 'four hundred four', '3.30' / '3:30' -> 'three thirty', so "how a number is written" is not an error."""
+    def clock(m):
+        h, mm = int(m.group(1)), m.group(2)
+        return " " + " ".join(_int_words(h) + ([] if mm == "00" else (["oh"] if mm[0] == "0" else []) + _int_words(int(mm)))) + " "
+    text = re.sub(r"\b(\d{1,2})[:.](\d{2})\b", clock, text)
+    text = re.sub(r"(?<=\d),(?=\d{3}\b)", "", text)                  # 2,500 -> 2500
+    return re.sub(r"\d+", lambda m: " " + " ".join(_int_words(int(m.group()))) + " ", text)
+
+
 def normalise(text: str) -> list[str]:
-    text = text.lower().replace("-", " ")
-    text = re.sub(r"[^a-z0-9' ]+", " ", text)
-    return text.split()
+    text = _spell_numbers(text.lower().replace("-", " "))
+    text = re.sub(r"[^a-z' ]+", " ", text)
+    words = text.split()
+    return [w for i, w in enumerate(words) if not (w == "and" and i and words[i - 1] in ("hundred", "thousand"))]
 
 
 def edit_distance(a: list[str], b: list[str]) -> int:
@@ -97,7 +137,7 @@ def load_set(folder: str):
 
 
 def record(folder: str, device=None, prompts=None) -> int:
-    """Interactive: show a sentence, record it, save it. Press Enter to start and again to stop; type s to skip, q to quit."""
+    """Interactive: show a sentence, record it, save it. Enter starts and stops; s skips, q quits. Already-recorded prompts are skipped, so you can resume."""
     import sounddevice as sd
     from .audio import _resolve_device
     os.makedirs(folder, exist_ok=True)
@@ -108,6 +148,8 @@ def record(folder: str, device=None, prompts=None) -> int:
           "putting NN.wav and NN.txt files in that folder.\n")
     for i, sentence in enumerate(prompts, 1):
         name = f"{i:02d}"
+        if os.path.exists(os.path.join(folder, name + ".wav")):
+            continue                                      # already recorded: only the new prompts are asked
         print(f"[{i}/{len(prompts)}]  {sentence}")
         ans = input("   Enter = record, s = skip, q = quit > ").strip().lower()
         if ans == "q":
