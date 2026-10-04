@@ -50,7 +50,7 @@ class Combo:
                 self.slots.append(frozenset({part}))
             else:
                 raise ValueError(f"Unknown key '{part}' in '{spec}'. Try f9, insert, scroll_lock, ctrl+win, "
-                                 "ctrl+alt, ctrl+shift+space ... (run find_key.bat to see key names)")
+                                 "ctrl+alt, ctrl+shift+space ... (run: holler keys, to see key names)")
 
     @property
     def modifier_only(self) -> bool:

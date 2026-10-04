@@ -4,150 +4,272 @@
 
 **Hold a key. Holler it. It's typed.**
 
-Free, offline, push-to-talk dictation for Windows. Works in every app, learns your jargon, understands when you correct yourself mid-sentence. Powered by Whisper running on your own CPU: no account, no cloud, no subscription.
+Free, offline, push-to-talk dictation for your desktop. Hold a key, speak, release, and your words appear at the cursor in any app. It learns your jargon, understands when you correct yourself mid-sentence, and runs Whisper on your own CPU: no account, no cloud, no subscription.
 
 [![PyPI](https://img.shields.io/pypi/v/holler)](https://pypi.org/project/holler/)
+[![Tests](https://github.com/MayankPunghal/holler/actions/workflows/tests.yml/badge.svg)](https://github.com/MayankPunghal/holler/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/MayankPunghal/holler/blob/main/LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20(experimental)-lightgrey)
 
 ![Holler status pill](https://raw.githubusercontent.com/MayankPunghal/holler/main/docs/pill-demo.gif)
 
 </div>
 
-## Why Holler
+## Contents
 
-- **Works everywhere.** It pastes at your cursor, so it works in your editor, browser, terminal, Claude, Slack, anywhere you can type.
-- **Private and free.** Audio is processed on your machine and never leaves it. No subscription, no usage limits.
-- **Understands self-corrections.** Say *"Meet at 3, no wait, 4 pm"* and you get *"Meet at 4 pm"*. *"Today is Monday, no no wait, Tuesday"* becomes *"Today is Tuesday"*. Fillers (um, uh) are dropped.
-- **Learns your words.** Add your jargon and names once, or fix a mistake and teach it in one keystroke. *"Mach"* becomes *"Moq"* from then on.
-- **Stays out of the way.** A small always-on-top pill shows a live waveform while you speak and a check mark when the text is in. Idle CPU is near zero, and the model's memory is freed when you haven't dictated for a while.
-- **Proper install.** One `pip` command, a setup wizard, a settings window, a tray icon, start-with-Windows.
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Requirements and platform support](#requirements-and-platform-support)
+- [Installation](#installation)
+- [Using Holler](#using-holler)
+- [Teaching it your words](#teaching-it-your-words)
+- [Configuration reference](#configuration-reference)
+- [Command line reference](#command-line-reference)
+- [Speech models](#speech-models)
+- [Hinglish and Hindi](#hinglish-and-hindi)
+- [Other engines](#other-engines-optional)
+- [Benchmarking on your own voice](#benchmarking-on-your-own-voice)
+- [If Hugging Face is unavailable](#if-hugging-face-is-unavailable)
+- [How it works](#how-it-works)
+- [Privacy and security](#privacy-and-security)
+- [Troubleshooting and FAQ](#troubleshooting-and-faq)
+- [Development](#development)
+- [Roadmap](#roadmap)
+- [Contributing, changelog, license](#contributing-changelog-license)
 
-## Install
+## Features
 
-You need **Windows 10/11** and **Python 3.10 or newer** ([download](https://www.python.org/downloads/); tick "Add python.exe to PATH" in the installer).
+- **Works in every app.** Text is pasted at your cursor, so it works in editors, browsers, terminals, chat apps and anything else you can type into.
+- **Private and free.** Audio is processed on your machine and never leaves it. There is no account, no usage limit and no telemetry. The only network use is the one-time model download.
+- **Understands self-corrections.** *"Meet at 3, no wait, 4 pm"* becomes *"Meet at 4 pm"*. *"Today is Monday, no no wait, Tuesday"* becomes *"Today is Tuesday"*. Fillers such as "um" and "uh" are dropped.
+- **Learns your words.** Add your jargon and names once, or fix a mistake and teach Holler with one chord. *"Mach"* becomes *"Moq"* from then on.
+- **Stays out of the way.** A small always-on-top pill shows a live waveform while you speak and a check mark when the text is in. Idle CPU is near zero, and the model's memory is freed after you stop dictating for a while.
+- **Resilient model downloads.** Downloads resume, fall back to `curl`, then to a GitHub mirror, and model weights are checked against known checksums. You can point it at your own mirror or load any compatible Whisper model.
+- **Measure, don't guess.** `holler bench` scores speech models on your own voice and vocabulary.
+- **Proper install.** One `pip` command, a setup wizard, a settings window, a tray icon and start-on-login.
 
-**From PyPI:**
+## Quick start
+
+On **Windows 10/11** with [Python 3.10 or newer](https://www.python.org/downloads/) (tick "Add python.exe to PATH" in the installer):
 
 ```powershell
 py -m pip install holler
 py -m holler
 ```
 
-**From source** (this repository):
+The first command installs Holler. The second opens the setup wizard, which checks prerequisites, tests your microphone, lets you pick a hotkey and speech model, downloads the model once, and starts Holler in the background. Then hold **Ctrl+Win**, speak, and release.
 
-1. Download or `git clone` the repository and open its folder in File Explorer.
-2. Click the folder's address bar, type `cmd` and press Enter. A terminal opens in that folder.
-3. Install it. Note the dot at the end: it means "this folder".
+## Requirements and platform support
 
-   ```powershell
-   py -m pip install .
-   ```
-4. Start it. The setup wizard opens the first time; afterwards it runs quietly in the background and you can close the terminal.
+| Platform | Status | Notes |
+|---|---|---|
+| **Windows 10/11** | Supported | Developed and tested here: global hotkeys, the layered status pill, tray icon, paste and start-on-login. |
+| **Linux (X11)** | Experimental | The core (audio pipeline, hotkey logic, Whisper, vocabulary, settings UI) is tested on Linux in CI with a fake keyboard and microphone. Real global hotkeys, paste and the tray have **not** been verified on a Linux desktop. Details below. |
+| Linux (Wayland) | Not supported | Global key capture generally doesn't work under Wayland. Use an X11 session. |
+| macOS | Not supported | Untested. Needs Accessibility and Input Monitoring permissions, and the code paths have not been exercised. |
 
-   ```powershell
-   py -m holler
-   ```
+**Everywhere:** Python 3.10 or newer, a microphone, about 1 GB of free disk for models, and roughly 300 MB of RAM while the default model is loaded (it is freed when idle).
 
-The wizard checks prerequisites, tests your microphone, lets you pick your hotkey and speech model (downloaded once, 75 MB to 1.5 GB) and add your own jargon. When it finishes, hold **Ctrl+Win**, speak, and release. Holler keeps running in the system tray and, if you chose so, starts when you sign in.
+**Linux extras:** install system packages first, for example on Debian or Ubuntu:
 
-`py -m holler` is the one command to remember: the first time it opens the wizard; if Holler is already running it opens **Settings**; otherwise it starts Holler in the background. You can also click the tray icon or use the **Holler** entry in the Start menu.
+```bash
+sudo apt install python3-tk libportaudio2 xclip
+```
 
-`py -m holler` is the most reliable way to run it. If `holler` is on your PATH you can type that instead.
+`python3-tk` is for the setup and settings windows, `libportaudio2` for microphone access and `xclip` (or `xsel`) for the clipboard. On Linux the "Win" key is the Super key, which many desktops already use, so choose another chord in Settings (for example `ctrl+shift+space` or `f9`) and use the `ctrl+shift+v` paste mode for terminals. The pill is drawn as a simple always-on-top window instead of the Windows layered pill, and the tray icon needs your desktop's AppIndicator support.
 
-Update: `py -m pip install --upgrade holler` (or `py -m pip install --upgrade .` from source). Remove: `py -m holler stop`, then `py -m pip uninstall holler`. Your settings stay in `%APPDATA%\Holler`; delete that folder to remove them too.
+If you try Holler on Linux, please open an issue with what worked and what didn't.
 
-## Using it
+## Installation
+
+### From PyPI (recommended)
+
+```powershell
+py -m pip install holler
+py -m holler
+```
+
+On Linux use `python3 -m pip install holler` (preferably inside a virtual environment or with `pipx`) and `python3 -m holler`.
+
+`py -m holler` is the one command to remember:
+
+- first time: opens the **setup wizard**;
+- Holler running: opens **Settings**;
+- otherwise: starts Holler **in the background** (you can close the terminal).
+
+You can also click the tray icon, or use the **Holler** entry in the Start menu. If `holler` is on your PATH you can type that instead; `py -m holler` always works, even when Python's Scripts folder isn't on PATH.
+
+### From source
+
+```powershell
+git clone https://github.com/MayankPunghal/holler
+cd holler
+py -m pip install .
+py -m holler
+```
+
+Mind the dot after `install`: it means "this folder". If you see *"You must give at least one requirement to install"*, the dot is missing.
+
+### Optional extras
+
+```powershell
+py -m pip install "holler[parakeet]"    # NVIDIA Parakeet engine (see "Other engines")
+```
+
+### Update and uninstall
+
+```powershell
+py -m pip install --upgrade holler
+py -m holler stop
+py -m pip uninstall holler
+```
+
+Your settings, vocabulary, history and downloaded models live in the data folder (`%APPDATA%\Holler` on Windows, `~/.config/holler` on Linux; `holler where` prints it). Updating or uninstalling never touches it; delete the folder to remove everything.
+
+## Using Holler
 
 | You do | What happens |
 |---|---|
-| Hold **Ctrl+Win** for a third of a second, speak, release | the text is pasted at your cursor |
-| Quick tap, or a shortcut such as Ctrl+C / Ctrl+Win+Left | nothing (that's what the hold delay is for) |
-| Press **Esc** while holding | cancels the recording |
+| Hold **Ctrl+Win** for about a third of a second, speak, release | The text is pasted at your cursor |
+| Quick tap, or a shortcut such as Ctrl+C or Ctrl+Win+Left | Nothing (that's what the hold delay is for) |
+| Press **Esc** while holding | Cancels the recording |
 | Fix a mistake by hand, then hold **Ctrl+Shift+Win** for a moment | Holler learns the correction |
-| Click the tray icon | settings, pause, quit |
+| Click the tray icon | Settings, pause, quit |
 
-Everything is configurable in **Settings**: hotkeys, microphone, model, paste method, cleanup, and your vocabulary.
+**The status pill** appears while you speak: a live waveform when listening, then "transcribing", and a check mark when the text is in. It also reports a muted or missing microphone instead of silently doing nothing.
 
-### Teaching it your words
+**What cleanup does** (switch off with `cleanup: false`):
+
+| You say | You get |
+|---|---|
+| "um so basically uh we should ship it" | "so basically we should ship it" |
+| "Meet at 3, no wait, 4 pm" | "Meet at 4 pm" |
+| "Today is Monday, no no wait, Tuesday" | "Today is Tuesday" |
+| "the mach library" (with the replacement `mach => Moq`) | "the Moq library" |
+
+**Hotkeys.** Any key or chord works: `f9`, `scroll_lock`, `ctrl+win`, `ctrl+shift+win`. The default `ctrl+win` uses only modifier keys, so holding it never types a character in any app. Use `holler keys` to see how a key is named. Chords of left-side keys are the safest on laptops, which often lack a Right Ctrl or hide keys behind Fn.
+
+## Teaching it your words
 
 Whisper itself doesn't learn, so Holler learns the words around it, three ways:
 
-1. **Vocabulary tab.** Add jargon and names (`xUnit`, `Kubernetes`, `Priya`) and "wrong → right" corrections.
-2. **Correct, then hold Ctrl+Shift+Win.** Dictate, fix the wrong word in that line, leave the cursor on it, hold the three keys for a moment (they only use modifier keys, so nothing is ever typed). Holler compares what it pasted with your fix and remembers it.
-3. **History tab.** Pick a past dictation, fix the text, click *Learn*.
+1. **Vocabulary tab.** Add jargon and names (`xUnit`, `Kubernetes`, `Priya`) and "wrong → right" corrections. Your vocabulary is also passed to Whisper as hotwords, which biases decoding toward your terms.
+2. **Correct, then hold Ctrl+Shift+Win.** Dictate, fix the wrong word in that line, leave the cursor on it, and hold the three keys for a moment. They are all modifiers, so nothing is ever typed. Holler compares what it pasted with your fix and remembers it.
+3. **History tab.** Pick a past dictation, fix the text and click *Learn*.
 
-A fix that includes a neighbouring word ("null difference" → "null reference") is learned at once. A fix to a single ordinary word is learned after you correct it twice, so one odd correction can't break a normal word everywhere.
+A fix that includes a neighbouring word ("null difference" → "null reference") is learned immediately. A fix to a single ordinary word is learned after you correct it twice, so one odd correction can't break a normal word everywhere.
 
-## Command line
+Moving from an older install? `holler import FOLDER` merges its `keywords.txt` and `replacements.txt` into your current vocabulary.
 
-```
-holler                 open: wizard (first time) / settings / start in the background
-holler setup           setup wizard             holler settings   settings window
-holler start|stop|restart|status                run in the background / control it
-holler autostart on|off                         start with Windows
-holler doctor          check microphone, model, hotkey and pill, with fixes
-holler keys            show the name of each key you press
-```
+## Configuration reference
 
-Settings live in `%APPDATA%\Holler` (`holler where` prints the path): `config.json`, `keywords.txt`, `replacements.txt`, history and models. Updating Holler never touches them.
+Most settings are in the **Settings** window (open it with `py -m holler`). Everything lives in `config.json` in the data folder. Command-line flags on `holler run` override it for one session.
 
-## How it stays accurate without being slow
+| Key | Default | Meaning |
+|---|---|---|
+| `key` | `ctrl+win` | Key or chord to hold while speaking |
+| `hold_ms` | `350` | Hold time before recording starts (0 = instantly) |
+| `teach_key` | `ctrl+shift+win` | Chord that learns from the correction on the current line |
+| `engine` | `whisper` | Speech engine: `whisper`, or `parakeet` (optional extra) |
+| `model` | `small.en` | Model name, Hugging Face repo id, or a local folder (see [Speech models](#speech-models)) |
+| `beam` | `2` | Whisper beam size (higher is slower, slightly more accurate) |
+| `lang` | auto | Language code such as `en` or `hi` (English-only models ignore it) |
+| `initial_prompt` | empty | Whisper style hint, used for Hinglish (see [Hinglish and Hindi](#hinglish-and-hindi)) |
+| `device` | system default | Microphone name |
+| `paste` | `ctrl+v` | `ctrl+v`, `ctrl+shift+v` (Linux terminals) or `type` (keystroke by keystroke, for apps that block paste) |
+| `enter` | `false` | Press Enter after each dictation |
+| `trailing_space` | `true` | Add a space after each dictation |
+| `cleanup` | `true` | Remove fillers and resolve spoken self-corrections |
+| `log` | `true` | Keep a local history of dictations (the History tab needs it) |
+| `overlay` / `ui` | `true` / `auto` | Show the status pill; `ui` is `auto`, `pill` or `classic` |
+| `sound` | `true` | Start and stop beeps (Windows) |
+| `unload_after` | `10` | Idle minutes before the model's memory is freed (0 = keep loaded) |
+| `extra_keywords` | empty | Comma-separated terms on top of your vocabulary |
+| `model_url` | empty | Your own model mirror (see [mirrors](#if-hugging-face-is-unavailable)) |
+| `mirror_dir` | empty | Also copy every downloaded model to this folder (for maintainers re-hosting models) |
 
-| Technique | Why |
+Environment variables: `HOLLER_HOME` (data folder), `HOLLER_MODEL_URL`, `HOLLER_MIRROR_DIR`, `HOLLER_SKIP_VERIFY=1` (skip model checksum checks).
+
+## Command line reference
+
+| Command | What it does |
 |---|---|
-| `faster-whisper`, int8, CPU, beam 2 | much faster than reference Whisper at nearly the same accuracy |
-| Silero VAD | cuts silence, the main source of hallucinated text ("Thank you.") |
-| Temperature 0, no previous-text conditioning | no random fallbacks or repetition loops |
-| `hotwords` from your vocabulary | biases decoding toward your terms |
-| Always-open mic, pre-roll and a short tail | first and last words aren't clipped; no start-up lag |
-| Gain normalisation, silence detection | quiet mics still work; a muted mic is reported, not guessed |
-| Rule-based post-processing | casing, replacements, fillers and self-corrections cost microseconds, no LLM needed |
+| `holler` | Setup wizard on first run; Settings if running; otherwise starts in the background |
+| `holler run` | Run in this terminal until you close it (what start-on-login uses). Flags: `--key`, `--hold-ms`, `--teach-key`, `--engine`, `--model`, `--beam`, `--lang`, `--paste`, `--device`, `--no-overlay`, `--no-tray`, `--no-sound`, `--download-only` |
+| `holler setup [--text]` | Setup wizard (`--text` for a terminal-only version) |
+| `holler settings` | Settings window |
+| `holler start` / `stop` / `restart` / `status` | Control the background instance |
+| `holler autostart on\|off\|status` | Start with the computer |
+| `holler doctor [--pill]` | Check prerequisites, microphone, model and hotkey, with fixes (`--pill` plays the pill through its states) |
+| `holler keys` | Print the name of each key you press |
+| `holler where` | Print the data folder |
+| `holler import FOLDER` | Merge vocabulary from an older install |
+| `holler export-model FOLDER [--model NAME \| --all]` | Copy downloaded models out, named for re-hosting |
+| `holler bench record\|run` | Compare models on your own voice (see below) |
+| `holler --version` | Show the version |
 
-Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, and multilingual `tiny`, `base`, `small`, `medium` (Hindi, Hinglish and 90+ languages). Two experimental extras: `distil-small.en` and `large-v3-turbo` (more accurate, needs ~1.7 GB RAM).
+## Speech models
 
-## Troubleshooting
+Models download once into the data folder. The default balances accuracy, speed and memory.
 
-- **`pip install` says "You must give at least one requirement".** You left off the dot: `py -m pip install .`
-- **`holler` is not recognised.** Use `py -m holler` instead (it works even when Python's Scripts folder isn't on PATH).
-- **Run `holler doctor`** (or `py -m holler doctor`). It checks every prerequisite, tests the microphone, and tells you how to fix what's wrong.
-- **Hotkey doesn't work in some app.** Choose a different chord in Settings. Chords of left-side keys are the safest on laptops, many of which lack a Right Ctrl or hide keys behind Fn.
-- **Dictating into an app running as Administrator** requires Holler to run as Administrator too (a Windows rule for all keyboard tools).
-- **Model download blocked by your network.** Holler retries with Windows' own `curl.exe` and, as a last resort, shows the files to download by hand. See *If Hugging Face is unavailable* below.
-- **Problems are logged** to `errors.log` in the data folder.
+| Model | Download | RAM | Notes |
+|---|---|---|---|
+| `tiny.en` | 75 MB | ~120 MB | Fastest, noticeably less accurate |
+| `base.en` | 145 MB | ~170 MB | Light and quick; fine for clear speech |
+| **`small.en`** | 484 MB | ~320 MB | **Default:** accurate on accents and jargon |
+| `medium.en` | 1.5 GB | ~1.3 GB | Most accurate English; needs a fast PC |
+| `tiny`, `base`, `small`, `medium` | as above | as above | Multilingual (Hindi, Hinglish, 90+ languages) |
+| `distil-small.en`, `large-v3-turbo` | 330 MB, 1.6 GB | ~250 MB, ~1.7 GB | Experimental |
+
+### Using your own model
+
+Holler runs [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so it accepts any Whisper model converted to CTranslate2 format: distilled models, fine-tunes for an accent or language, or one you converted yourself. In **Settings > Speech model** (an editable box) or `model` in `config.json`, enter either:
+
+- a Hugging Face repo id such as `Systran/faster-distil-whisper-large-v3`, which downloads into the models folder like the built-in ones, or
+- a folder on your PC containing `config.json`, `model.bin`, `tokenizer.json` and `vocabulary.txt` (or `vocabulary.json`).
+
+Names containing `.en` or ending in `-en` are treated as English-only.
 
 ## Hinglish and Hindi
 
-Use a **multilingual** model (`small`, `medium`; the `.en` models are English only). Whisper decides how to write Hindi words: left on automatic it may output Devanagari, or force Hindi words into odd English spellings. Two settings steer it:
+Use a **multilingual** model (`small`, `medium`; the `.en` models are English only). Whisper decides how to write Hindi words: left on automatic it may output Devanagari or force Hindi words into odd English spellings. Two settings steer it:
 
-- `lang`: `en`, `hi`, or empty for automatic (Settings > Language).
-- `initial_prompt`: a short Roman-script sample such as `Haan bhai, main kal office aaunga. Meeting ke baad call kar lena, theek hai?`. It nudges Whisper to write Hindi in English letters.
+- `lang`: `en`, `hi`, or empty for automatic.
+- `initial_prompt`: a short Roman-script sample such as `Haan bhai, main kal office aaunga. Meeting ke baad call kar lena, theek hai?` It nudges Whisper to write Hindi in English letters.
 
 Which combination works best depends on your voice, so measure it:
 
-```
+```powershell
 py -m holler bench record --set hinglish
 py -m holler bench run --set hinglish --models small,small@en+hing,small@hi,medium@en+hing
 ```
 
-(`@en` / `@hi` sets the language, `+hing` adds the built-in Roman-Hinglish prompt.) Hinglish spelling varies a lot (`nahi` / `nahin`), so compare models against each other rather than reading the percentage as an absolute score. India-focused fine-tunes such as [Oriserve's Hindi2Hinglish](https://github.com/OriserveAI/Whisper-Hindi2Hinglish) exist, but they are large and not in the CTranslate2 format Holler loads, so they need converting first (see *Using your own model*).
+(`@en` and `@hi` set the language; `+hing` adds the built-in Roman-Hinglish prompt.) Hinglish spelling varies a lot (`nahi` against `nahin`), so compare models against each other rather than reading the percentage as an absolute score. India-focused fine-tunes such as [Oriserve's Hindi2Hinglish](https://github.com/OriserveAI/Whisper-Hindi2Hinglish) exist, but they are large and not in the CTranslate2 format Holler loads, so they need converting first.
 
 ## Other engines (optional)
 
-Whisper is built in. NVIDIA's Parakeet TDT is available as an extra: `py -m pip install "holler[parakeet]"`, then pick **parakeet** under *Settings > Speech engine*. It is fast on CPU and does not invent text during silence, but it can't take hotwords, so rely on your replacement rules. It is **new and untested on Indian-accented English**: run `holler bench` first and see which wins on your voice. Moonshine and Qwen3-ASR are candidates for later.
+Whisper is built in. NVIDIA's Parakeet TDT is available as an extra:
 
-## Pick the best model for your voice
+```powershell
+py -m pip install "holler[parakeet]"
+```
+
+Then pick **parakeet** under *Settings > Speech engine*. It is fast on CPU and does not invent text during silence, but it can't take hotwords, so rely on your replacement rules. In the author's own benchmark it was less accurate than `small.en` on jargon-heavy, Indian-accented English, so run `holler bench` before switching. Engines are plugins (`holler.engines`), so adding another is a small class.
+
+## Benchmarking on your own voice
 
 Leaderboards don't know your accent or your jargon. Measure instead:
 
-```
-py -m holler bench record                       # read ~12 sentences aloud (once)
+```powershell
+py -m holler bench record                       # read 24 sentences aloud (once; resumable)
 py -m holler bench run --models small.en,base.en,small
-py -m holler bench run --models small.en,parakeet:nemo-parakeet-tdt-0.6b-v3   # after installing holler[parakeet]
+py -m holler bench run --models small.en,parakeet:nemo-parakeet-tdt-0.6b-v3
 ```
 
-Example (one Indian-English speaker, 24 sentences full of jargon, CPU laptop; a small sample, so treat differences of a point or two as noise):
+It prints word error rate, speed and load time per model and shows the clips each one got wrong. Your vocabulary is included by default (`--no-hotwords` switches it off; `--raw` skips replacements and cleanup). How a number is written (`404` or "four hundred and four") is not counted as an error. You can add your own sentences as `NN.wav` plus `NN.txt` in the bench folder.
+
+Example: one Indian-English speaker, 24 jargon-heavy sentences, CPU laptop. A small sample, so treat differences of a point or two as noise.
 
 | Model | Word error rate | Speed |
 |---|---|---|
@@ -155,43 +277,105 @@ Example (one Indian-English speaker, 24 sentences full of jargon, CPU laptop; a 
 | `base.en` | 5.5% | 7.8x |
 | Parakeet TDT 0.6B v3 | 7.9% | 5.6x |
 
-It prints word error rate, speed and load time per model, and shows the clips each one got wrong. Your vocabulary is included by default (`--no-hotwords` to switch it off; `--raw` skips fixes and cleanup). You can add your own sentences as `NN.wav` + `NN.txt` in the bench folder.
-
-## Keeping a mirror of the models you download
-
-Set `mirror_dir` in `config.json` (or the `HOLLER_MIRROR_DIR` variable) to a folder. Every catalogue model you download afterwards is also copied there, named `<model>-<file>`, ready to attach to a GitHub release. `holler export-model FOLDER --all` does the same for models you already have.
-
-## Using your own model
-
-Holler runs [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so it accepts any Whisper model converted to CTranslate2 format: distilled models, fine-tunes for an accent or language, or one you converted yourself. In **Settings > Speech model** (it is an editable box), or `"model"` in `config.json`, enter either:
-
-- a Hugging Face repo id, e.g. `Systran/faster-distil-whisper-large-v3`. It downloads into the models folder like the built-in ones, or
-- a folder on your PC containing `config.json`, `model.bin`, `tokenizer.json` and `vocabulary.txt` (or `.json`).
-
-Models whose names contain `.en` or end in `-en` are treated as English-only. Other engines (Parakeet, Moonshine) are on the roadmap, not supported yet.
-
 ## If Hugging Face is unavailable
 
-Holler downloads a Whisper model once; after that it runs fully offline. If the download source ever disappears, three fallbacks apply:
+Holler downloads a model once; after that it runs fully offline. If the download source ever disappears, these fallbacks apply, in order:
 
-1. **Automatic mirror.** Downloads try Hugging Face first, then the copy in this repo's [`models` release](https://github.com/MayankPunghal/holler/releases/tag/models).
-2. **Your own mirror.** Set `model_url` in Settings' `config.json`, or the `HOLLER_MODEL_URL` environment variable, to any server that hosts `<name>/<file>` (e.g. `https://my.host/models` serves `https://my.host/models/small.en/model.bin`). A template with `{name}` and `{file}` also works.
-3. **Manual install.** Put `config.json`, `model.bin`, `tokenizer.json` and `vocabulary.txt` (or `vocabulary.json`) in the model's folder, e.g. `%APPDATA%\Holler\models\small.en\`. `holler where` prints the data folder. Any CTranslate2 Whisper model works the same way, including ones converted yourself with `ct2-transformers-converter`.
+1. **Your own mirror.** Set `model_url` (or `HOLLER_MODEL_URL`) to any server hosting `<name>/<file>`, for example `https://my.host/models` serves `https://my.host/models/small.en/model.bin`. A template with `{name}` and `{file}` also works.
+2. **Hugging Face.**
+3. **The project mirror** on this repo's [`models` release](https://github.com/MayankPunghal/holler/releases/tag/models), with files named `<model>-<file>`.
+4. **Manual install.** Put `config.json`, `model.bin`, `tokenizer.json` and `vocabulary.txt` (or `.json`) in the model's folder, such as `%APPDATA%\Holler\models\small.en\`.
+
+Weights of `small.en`, `base.en` and `small` are checked against pinned SHA-256 checksums. A mirror serving different bytes is skipped; Hugging Face itself is trusted, so upstream updates still work. Maintainers can re-host models with `holler export-model FOLDER --all` or `mirror_dir`.
+
+## How it works
+
+```
+ key chord ──▶ hotkey state machine ──▶ recorder ──▶ speech engine ──▶ cleanup ──▶ paste
+ (hold 350 ms)  (taps and shortcuts     (always-open   (Whisper, int8,   (fillers,   (clipboard
+                 are ignored)             mic, pre-roll) VAD, hotwords)    self-fix,    + Ctrl+V,
+                                                                          vocabulary)  then restore)
+```
+
+| Technique | Why |
+|---|---|
+| `faster-whisper`, int8, CPU, beam 2 | Much faster than reference Whisper at nearly the same accuracy |
+| Silero VAD | Cuts silence, the main source of hallucinated text ("Thank you.") |
+| Temperature 0, no previous-text conditioning | No random fallbacks or repetition loops |
+| `hotwords` from your vocabulary | Biases decoding toward your terms |
+| Always-open mic, pre-roll and a short tail | First and last words aren't clipped; no start-up lag |
+| Gain normalisation, silence detection | Quiet mics still work; a muted mic is reported, not guessed |
+| Rule-based post-processing | Casing, replacements, fillers and self-corrections cost microseconds; no LLM needed |
+| Idle unload | The model's memory is freed after `unload_after` minutes and reloaded while you speak |
+
+## Privacy and security
+
+- Audio is processed locally and discarded after transcription. It is never saved or sent anywhere.
+- Holler makes no network requests except downloading a model (Hugging Face, the GitHub mirror, or a URL you configure). No telemetry, no accounts.
+- A local history of your dictations is kept in `dictation_log.tsv` in the data folder so the History tab and learning work. Set `log: false` to stop it, or delete the file.
+- To type for you, Holler needs a global keyboard hook, which some antivirus tools flag. It only watches for your chord, and the source is in this repository.
+- Dictating into an app running as Administrator requires Holler to run as Administrator too (a Windows rule for all keyboard tools).
+
+Report vulnerabilities as described in [SECURITY.md](https://github.com/MayankPunghal/holler/blob/main/SECURITY.md).
+
+## Troubleshooting and FAQ
+
+**Run `holler doctor` first.** It checks every prerequisite, tests the microphone and tells you how to fix what's wrong. Problems are also logged to `errors.log` in the data folder.
+
+- **`pip install` says "You must give at least one requirement".** You left off the dot in `py -m pip install .`, or the name in `py -m pip install holler`.
+- **`holler` is not recognised.** Use `py -m holler`.
+- **The hotkey doesn't work in some app.** Choose a different chord in Settings. If the app runs as Administrator, run Holler as Administrator too.
+- **A letter is typed when I use a chord.** Your layout treats that combination as a character (Ctrl+Alt is AltGr on many layouts). Use a modifier-only chord such as `ctrl+shift+win`.
+- **Nothing is pasted.** Try `paste: "type"` for apps that block paste, or `ctrl+shift+v` for Linux terminals.
+- **The pill doesn't show over some app.** Known issue: windows that pin themselves to the top (such as Claude Desktop on some setups) can hide it. Dictation still works.
+- **The model download fails.** Holler retries with `curl`, then the project mirror. See [If Hugging Face is unavailable](#if-hugging-face-is-unavailable).
+- **It recorded silence or nothing.** The pill says so. Check the microphone in Settings and Windows' privacy settings for microphone access.
+- **Is it as good as paid dictation tools?** Accuracy depends on your voice and vocabulary, which is why `holler bench` exists. For many people it is good enough, with the benefit of being offline and free.
+- **Does it use my GPU?** Not yet; it is built to be light on CPU.
 
 ## Development
 
 ```powershell
-git clone https://github.com/MayankPunghal/holler && cd holler
-pip install -e .
-python tests/test_cleanup.py && python tests/test_vocab.py && python tests/test_app.py
+git clone https://github.com/MayankPunghal/holler
+cd holler
+py -m pip install -e .
 ```
 
-Layout: `src/holler/` has `cli`, `app` (hotkey state machine and pipeline), `keys`, `audio`, `engine`, `models`, `output`, `overlay` (the pill), `cleanup`, `vocab`, `config`, `process`, `tray`, `doctor`, and `ui/` (wizard and settings). The tests run anywhere using a fake keyboard, microphone and Whisper. Regenerate the pill images with `python -m holler.overlay --preview docs`.
+Run the tests (they use a fake keyboard, microphone and Whisper, so they need no audio hardware):
 
-## Status and roadmap
+```powershell
+$env:PYTHONPATH="src"
+python tests/test_cleanup.py; python tests/test_vocab.py; python tests/test_app.py; python tests/test_models.py; python tests/test_bench.py
+```
 
-Holler 1.0 is built for Windows 10/11. The logic is tested; the Windows-specific parts (hotkeys, pill, tray, paste) are checked by hand. macOS and Linux are untested. Next: Moonshine and Qwen3-ASR as optional engines, if `holler bench` shows they help. Ideas: streaming partial text, GPU support, a Windows installer. Issues and pull requests are welcome, and a star helps others find it.
+CI runs them on Linux and Windows. Project layout:
 
-## Credits
+```
+src/holler/
+  cli.py          command line and entry points      app.py       hotkey state machine and pipeline
+  keys.py         chords and key names               audio.py     microphone capture
+  engines/        speech engines (whisper, parakeet) models.py    catalogue, downloads, mirrors, checksums
+  cleanup.py      fillers and self-corrections       vocab.py     vocabulary, replacements, learning
+  output.py       paste and clipboard                overlay.py   the status pill
+  bench.py        holler bench                       doctor.py    holler doctor
+  process.py      background run, autostart          tray.py      tray icon
+  config.py       settings                           ui/          setup wizard and settings window
+tests/            unit and pipeline tests            docs/        images
+```
 
-[faster-whisper](https://github.com/SYSTRAN/faster-whisper) and OpenAI Whisper (both MIT), pynput, sounddevice, Pillow, pystray. MIT licensed.
+Regenerate the pill images with `python -m holler.overlay --preview docs`.
+
+**Releasing** (maintainers): update `CHANGELOG.md` and the version in `pyproject.toml` and `src/holler/__init__.py`, then publish a GitHub release tagged `vX.Y.Z`. The `publish` workflow builds and uploads to PyPI using trusted publishing.
+
+## Roadmap
+
+- Polish for Linux and the "pill over always-on-top windows" issue
+- Hinglish mode as a one-click setting, once measured on real voices
+- More optional engines (Moonshine, Qwen3-ASR) if `holler bench` shows they help
+- Streaming partial text, GPU support, a Windows installer
+
+## Contributing, changelog, license
+
+Issues and pull requests are welcome; see [CONTRIBUTING.md](https://github.com/MayankPunghal/holler/blob/main/CONTRIBUTING.md). Release notes are in [CHANGELOG.md](https://github.com/MayankPunghal/holler/blob/main/CHANGELOG.md). If Holler saves you time, a star helps others find it.
+
+Built on [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and OpenAI Whisper (both MIT), with pynput, sounddevice, Pillow, pystray and pyperclip. Licensed under the [MIT License](https://github.com/MayankPunghal/holler/blob/main/LICENSE).
