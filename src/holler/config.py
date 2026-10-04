@@ -10,6 +10,7 @@ DEFAULTS = {
     "key": "ctrl+win",           # key or chord to hold while speaking
     "hold_ms": 350,              # hold time before recording starts (0 = instantly)
     "teach_key": "ctrl+shift+win",  # hold to learn from the correction on the current line
+    "undo_key": "ctrl+alt+win",  # hold to delete the last dictation ("" = off); saying "scratch that" alone does the same
     "engine": "whisper",         # speech engine (see holler.engines); only whisper is built in for now
     "model": "small.en",
     "beam": 2,
@@ -22,6 +23,9 @@ DEFAULTS = {
     "paste": "ctrl+v",           # ctrl+v | ctrl+shift+v | type
     "enter": False,              # press Enter after each dictation
     "trailing_space": True,
+    "spoken_commands": True,     # "new line", "question mark" ... as stand-alone phrases become symbols
+    "smart_format": True,        # "twenty five percent" -> 25%, "john at example dot com" -> john@example.com
+    "auto_learn": True,          # undo + say it again: learn the difference as a correction
     "cleanup": True,             # remove fillers, resolve spoken self-corrections
     "log": True,                 # keep a local history of dictations (needed for the History tab)
     "overlay": True,             # show the status pill

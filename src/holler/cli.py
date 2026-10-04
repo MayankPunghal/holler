@@ -6,6 +6,7 @@
     holler setup         setup wizard        holler settings   settings window
     holler start / stop / restart / status   background control
     holler autostart on|off|status           start with the computer
+    holler suggest [--add]   terms you say often that your vocabulary lacks
     holler doctor        check microphone, model, hotkey, pill
     holler import FOLDER|--pack NAME merge keywords/replacements from an older install
     holler export-model FOLDER   copy the downloaded model out, named for re-hosting
@@ -19,7 +20,7 @@ from . import __version__, config, process
 from .paths import data_dir, log_error
 
 OVERRIDES = [  # command-line overrides for `run`; anything left out uses the saved settings
-    ("--key", "key", str), ("--hold-ms", "hold_ms", int), ("--teach-key", "teach_key", str),
+    ("--key", "key", str), ("--hold-ms", "hold_ms", int), ("--teach-key", "teach_key", str), ("--undo-key", "undo_key", str),
     ("--engine", "engine", str), ("--model", "model", str), ("--beam", "beam", int), ("--unload-after", "unload_after", float),
     ("--lang", "lang", str), ("--paste", "paste", str), ("--ui", "ui", str), ("--device", "device", str),
 ]
@@ -51,6 +52,8 @@ def build_parser():
     imp.add_argument("folder", nargs="?", default=None)
     imp.add_argument("--pack", default=None, help="a bundled starter pack, e.g. web (see: holler packs)")
     sub.add_parser("packs", help="list the bundled starter vocabulary packs")
+    sg = sub.add_parser("suggest", help="find terms you dictate often that are missing from your vocabulary")
+    sg.add_argument("--add", action="store_true", help="add the suggestions to your vocabulary")
     ex = sub.add_parser("export-model", help="copy a downloaded model to FOLDER, named for re-hosting as a mirror")
     ex.add_argument("folder")
     ex.add_argument("--model", default=None, help="default: the model in your settings")
@@ -171,6 +174,22 @@ def main(argv=None) -> int:
             return 1
         k, r = Vocab(data_dir(), PACKAGE_DATA).import_from(folder)
         print(f"Imported {k} keyword(s) and {r} correction(s).")
+    elif cmd == "suggest":
+        import os
+        from .paths import PACKAGE_DATA
+        from .suggest import suggest
+        from .vocab import Vocab
+        v = Vocab(data_dir(), PACKAGE_DATA)
+        found = suggest(os.path.join(data_dir(), "dictation_log.tsv"), v.keyword_list())
+        if not found:
+            print("Nothing to suggest yet. Dictate more (the history log must be on) and try again.")
+        for term, n in found:
+            print(f"  {term}  ({n}x)")
+        if found and ns.add:
+            added = sum(v.add_keyword(t) for t, _ in found)
+            print(f"Added {added} term(s).")
+        elif found:
+            print("Add them with: holler suggest --add")
     elif cmd == "packs":
         import os
         from .paths import PACKAGE_DATA

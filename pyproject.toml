@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "holler"
-version = "1.0.1"
+version = "1.0.0"
 description = "Free, offline push-to-talk dictation: hold a key, speak, and your words appear in any app. Local Whisper, no cloud, learns your jargon."
 readme = "README.md"
 license = { text = "MIT" }
@@ -38,6 +38,7 @@ parakeet = ["onnx-asr[cpu,hub]"]
 [project.urls]
 Homepage = "https://github.com/MayankPunghal/holler"
 Issues = "https://github.com/MayankPunghal/holler/issues"
+Changelog = "https://github.com/MayankPunghal/holler/blob/main/CHANGELOG.md"
 
 [project.scripts]
 holler = "holler.cli:main"

@@ -73,6 +73,8 @@ def run_doctor() -> int:
     try:
         from .keys import Combo
         Combo(cfg.key), Combo(cfg.teach_key)
+        if cfg.undo_key:
+            Combo(cfg.undo_key)
         _line(OK, f"hotkey: hold {cfg.key} (hold time {cfg.hold_ms} ms); learn-from-correction: {cfg.teach_key}")
     except Exception as e:
         fails += 1

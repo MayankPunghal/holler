@@ -5,10 +5,13 @@ import time
 
 from . import audio as A
 from .cleanup import clean
+from .spoken import apply_commands, is_undo, smart_format
 from . import models
 from .engines import make_engine
 from .keys import Combo, key_id, K
-from .output import beep, copy_selection, paste
+from difflib import SequenceMatcher
+
+from .output import backspace, beep, copy_selection, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
 from .vocab import Vocab, align
@@ -20,6 +23,7 @@ class App:
         self.home = data_dir()
         self.talk = Combo(cfg.key)
         self.teach_combo = Combo(cfg.teach_key)
+        self.undo_combo = Combo(cfg.undo_key) if cfg.undo_key else None
         self.hold_s = max(0, cfg.hold_ms) / 1000.0
         self.vocab = Vocab(self.home, PACKAGE_DATA)
         self.extra_terms = [k.strip() for k in (cfg.extra_keywords or "").split(",") if k.strip()]
@@ -36,6 +40,9 @@ class App:
         self.last = ""                       # last text pasted (for learning)
         self.paused = False
         self.teach_timer = None
+        self.undo_timer = None
+        self.pasted = []                     # (text, time) of recent pastes, newest last, for undo
+        self.undone = None                   # (text, time) of the dictation the user just undid
         self.tray = tray
         self.download_only = download_only
 
@@ -52,7 +59,8 @@ class App:
             self.overlay.set("ready")
             hold = f" for {a.hold_ms} ms" if self.hold_s else ""
             print(f"Ready ({a.engine} {a.model}). Hold [{a.key}]{hold} and speak; release to paste. "
-                  f"Esc cancels. Learn a fix: [{a.teach_key}].", flush=True)
+                  f"Esc cancels. Learn a fix: [{a.teach_key}]."
+                  + (f" Undo: [{a.undo_key}] or say \"scratch that\"." if a.undo_key else ""), flush=True)
         except Exception:
             log_error("startup")
             self.overlay.set("error")
@@ -64,7 +72,7 @@ class App:
     def _wait_released(self, timeout=1.5):
         """Don't send Ctrl+V while a chord key (e.g. Win) is still physically down: Win+V is clipboard history."""
         t0 = time.time()
-        while time.time() - t0 < timeout and any(self.talk.includes(k) or self.teach_combo.includes(k) for k in self.held):
+        while time.time() - t0 < timeout and any(self.talk.includes(k) or self.teach_combo.includes(k) or (self.undo_combo and self.undo_combo.includes(k)) for k in self.held):
             time.sleep(0.02)
 
     def finish(self):
@@ -84,9 +92,16 @@ class App:
             keywords = (self.vocab.prompt_terms() or []) + self.extra_terms or None
             with self.busy:
                 raw, lang = self.engine(audio, a.lang, keywords)
+            if a.spoken_commands and is_undo(raw):             # "scratch that" on its own: remove the last dictation
+                self.undo()
+                return
             text = self.vocab.apply(raw)
             if a.cleanup:
                 text = clean(text)
+            if a.spoken_commands:
+                text = apply_commands(text)
+            if a.smart_format:
+                text = smart_format(text)
             if not text:
                 self.overlay.set("empty")
                 return
@@ -98,18 +113,60 @@ class App:
                         f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}\t{raw}\t{text}\n")
                 except OSError:
                     pass
+            self._auto_learn(text)
             self._wait_released()
             self.synth = True
+            out = text + " " if (a.trailing_space and not a.enter) else text
             try:
-                paste(text + " " if (a.trailing_space and not a.enter) else text, a.paste, a.enter)
+                paste(out, a.paste, a.enter)
                 time.sleep(0.1)
             finally:
                 self.synth = False
+            if not a.enter:
+                self.pasted = (self.pasted + [(out, time.time())])[-10:]
             self.overlay.set("done")
             if a.sound:
                 beep("stop")
         except Exception:
             log_error("transcribe/paste")
+            self.overlay.set("error")
+
+    def _auto_learn(self, text):
+        """Undo, then say it again: the difference between the two takes is a correction worth learning."""
+        prev, self.undone = self.undone, None
+        if not self.cfg.auto_learn or not prev or time.time() - prev[1] > 60:
+            return
+        old = prev[0].strip()
+        if old.lower() == text.strip().lower() or SequenceMatcher(None, old.lower(), text.lower()).ratio() < 0.55:
+            return
+        try:
+            msgs = self.vocab.learn_from_edit(old, text.strip())
+        except Exception:
+            log_error("auto-learn")
+            return
+        for m in msgs or []:
+            print("Auto-learn:", m, flush=True)
+
+    def undo(self):
+        """Delete the last pasted dictation (assumes the cursor hasn't moved since)."""
+        try:
+            while self.pasted and time.time() - self.pasted[-1][1] > 600:
+                self.pasted.pop()                         # too old to trust
+            if not self.pasted:
+                self.overlay.set("noundo")
+                return
+            text, _ = self.pasted.pop()
+            self._wait_released()
+            self.synth = True
+            try:
+                backspace(len(text))
+            finally:
+                self.synth = False
+            self.undone = (text, time.time())
+            self.last = self.pasted[-1][0].strip() if self.pasted else ""
+            self.overlay.set("undone")
+        except Exception:
+            log_error("undo")
             self.overlay.set("error")
 
     def teach(self):
@@ -172,6 +229,15 @@ class App:
         self.teach_timer = t
         t.start()
 
+    def _start_undo_timer(self):
+        def fire():
+            if self.undo_combo.complete(self.held) and not self.down:
+                self.undo()
+        t = threading.Timer(max(self.hold_s, 0.3), fire)
+        t.daemon = True
+        self.undo_timer = t
+        t.start()
+
     def on_press(self, key):
         if self.synth:
             return
@@ -185,7 +251,16 @@ class App:
                 self.overlay.set("cancelled")
             return
         was_talk, was_teach = self.talk.complete(self.held), self.teach_combo.complete(self.held)
+        was_undo = bool(self.undo_combo and self.undo_combo.complete(self.held))
         self.held.add(kid)
+        if self.undo_combo and self.undo_combo.complete(self.held) and not was_undo:
+            if not self.down:
+                self._cancel_pending()
+                if self.undo_combo.modifier_only:
+                    self._start_undo_timer()
+                else:
+                    threading.Thread(target=self.undo, daemon=True).start()
+            return
         if self.teach_combo.complete(self.held) and not was_teach:
             if not self.down:
                 self._cancel_pending()
@@ -218,6 +293,8 @@ class App:
         self.held.discard(kid)
         if self.teach_timer and not self.teach_combo.complete(self.held):
             self.teach_timer.cancel()
+        if self.undo_timer and not (self.undo_combo and self.undo_combo.complete(self.held)):
+            self.undo_timer.cancel()
         if was_talk and not self.talk.complete(self.held):
             if self.pending:
                 self._cancel_pending()                    # a tap: ignore

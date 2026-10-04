@@ -135,6 +135,7 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | Quick tap, or a shortcut such as Ctrl+C or Ctrl+Win+Left | Nothing (that's what the hold delay is for) |
 | Press **Esc** while holding | Cancels the recording |
 | Fix a mistake by hand, then hold **Ctrl+Shift+Win** for a moment | Holler learns the correction |
+| Hold **Ctrl+Alt+Win**, or say "scratch that" on its own | Undo: the last dictation is deleted |
 | Click the tray icon | Settings, pause, quit |
 
 **The status pill** appears while you speak: a live waveform when listening, then "transcribing", and a check mark when the text is in. It also reports a muted or missing microphone instead of silently doing nothing.
@@ -148,6 +149,31 @@ Your settings, vocabulary, history and downloaded models live in the data folder
 | "Today is Monday, no no wait, Tuesday" | "Today is Tuesday" |
 | "the mach library" (with the replacement `mach => Moq`) | "the Moq library" |
 
+**Spoken commands** (on by default; `spoken_commands: false` turns them off). A command works when it stands on its own, which the speech engine marks with commas or a full stop, so pause briefly before and after it:
+
+| You say | You get |
+|---|---|
+| "Dear team, new paragraph, thanks all." | a blank line, then "Thanks all." |
+| "Are you coming, question mark" | "Are you coming?" |
+| "open bracket, see note, close bracket" | "(see note)" |
+| "Total, colon, five hundred rupees" | "Total: ₹500" |
+
+Also: `new line`, `exclamation mark`, `full stop`, `period`, `comma`, `semicolon`, `open/close quote`, `slash`, `underscore`, `at sign`, `hashtag`. A phrase inside a sentence ("add a new line to the file") is left alone.
+
+**Smart formatting** (on by default; `smart_format: false` turns it off):
+
+| You say | You get |
+|---|---|
+| "twenty five percent", "three point five percent" | `25%`, `3.5%` |
+| "five hundred rupees", "two thousand dollars", "five lakh rupees" | `₹500`, `$2,000`, `₹5 lakh` |
+| "john at example dot com" | `john@example.com` |
+| "github dot com slash holler" | `github.com/holler` |
+| "edit main dot py" | `main.py` |
+
+**Undo.** Hold **Ctrl+Alt+Win** (the `undo_key` setting; blank turns it off) or say "scratch that" as a whole dictation. Holler deletes the last pasted text by sending Backspace for each character, so it assumes the cursor is where the dictation ended. You can undo several dictations in a row, up to 10 and within 10 minutes. It does nothing if you have `enter: true`.
+
+**Punctuation comes from how you speak.** Whisper decides between `.`, `?` and `!` from your wording and intonation, so a question needs a rising tone and a statement a falling one. Short, clearly paced sentences give the best results, and spoken commands give you exact control where it matters.
+
 **Hotkeys.** Any key or chord works: `f9`, `scroll_lock`, `ctrl+win`, `ctrl+shift+win`. The default `ctrl+win` uses only modifier keys, so holding it never types a character in any app. Use `holler keys` to see how a key is named. Chords of left-side keys are the safest on laptops, which often lack a Right Ctrl or hide keys behind Fn.
 
 ## Teaching it your words
@@ -159,6 +185,10 @@ Whisper itself doesn't learn, so Holler learns the words around it, three ways:
 3. **History tab.** Pick a past dictation, fix the text and click *Learn*.
 
 A fix that includes a neighbouring word ("null difference" → "null reference") is learned immediately. A fix to a single ordinary word is learned after you correct it twice, so one odd correction can't break a normal word everywhere.
+
+**It also improves by itself.**
+- **Undo and say it again.** If you undo a dictation and re-dictate within a minute, Holler compares the two takes and learns the difference as a correction, with the same safety rule as above. Turn it off with `auto_learn: false`.
+- **`holler suggest`** reads your local history for names and identifiers you dictate often (three or more times) that your vocabulary lacks. `holler suggest --add` adds them, so the speech engine is told about them.
 
 **Ready out of the box.** On first run Holler seeds your vocabulary with the examples plus starter packs for web, cloud/DevOps, .NET, Python/data and general tech work (about 170 terms and 40 corrections, such as "cube control" → `kubectl`). They are plain text files in your data folder, so edit or delete anything you don't want. List the packs with `holler packs` and re-add one with `holler import --pack web`.
 
@@ -180,6 +210,7 @@ Most settings are in the **Settings** window (open it with `py -m holler`). Ever
 |---|---|---|
 | `key` | `ctrl+win` | Key or chord to hold while speaking |
 | `hold_ms` | `350` | Hold time before recording starts (0 = instantly) |
+| `undo_key` | `ctrl+alt+win` | Chord that undoes the last dictation (blank = off) |
 | `teach_key` | `ctrl+shift+win` | Chord that learns from the correction on the current line |
 | `engine` | `whisper` | Speech engine: `whisper`, or `parakeet` (optional extra) |
 | `model` | `small.en` | Model name, Hugging Face repo id, or a local folder (see [Speech models](#speech-models)) |
@@ -190,6 +221,9 @@ Most settings are in the **Settings** window (open it with `py -m holler`). Ever
 | `paste` | `ctrl+v` | `ctrl+v`, `ctrl+shift+v` (Linux terminals) or `type` (keystroke by keystroke, for apps that block paste) |
 | `enter` | `false` | Press Enter after each dictation |
 | `trailing_space` | `true` | Add a space after each dictation |
+| `spoken_commands` | `true` | Stand-alone "new line", "question mark" and similar become symbols |
+| `smart_format` | `true` | `25%`, `₹500`, `john@example.com`, `main.py` |
+| `auto_learn` | `true` | Learn from undo + dictate again |
 | `cleanup` | `true` | Remove fillers and resolve spoken self-corrections |
 | `log` | `true` | Keep a local history of dictations (the History tab needs it) |
 | `overlay` / `ui` | `true` / `auto` | Show the status pill; `ui` is `auto`, `pill` or `classic` |
@@ -211,6 +245,7 @@ Environment variables: `HOLLER_HOME` (data folder), `HOLLER_MODEL_URL`, `HOLLER_
 | `holler settings` | Settings window |
 | `holler start` / `stop` / `restart` / `status` | Control the background instance |
 | `holler autostart on\|off\|status` | Start with the computer |
+| `holler suggest [--add]` | Find terms you dictate often that your vocabulary lacks |
 | `holler doctor [--pill]` | Check prerequisites, microphone, model and hotkey, with fixes (`--pill` plays the pill through its states) |
 | `holler keys` | Print the name of each key you press |
 | `holler where` | Print the data folder |

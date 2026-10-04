@@ -84,3 +84,12 @@ def copy_selection(whole_line: bool = False) -> str:
     if old is not None:
         pyperclip.copy(old)
     return sel
+
+
+def backspace(n: int):
+    """Delete n characters before the cursor (used to undo the last dictation)."""
+    for i in range(max(0, n)):
+        kb.press(keyboard.Key.backspace)
+        kb.release(keyboard.Key.backspace)
+        if i % 50 == 49:
+            time.sleep(0.02)

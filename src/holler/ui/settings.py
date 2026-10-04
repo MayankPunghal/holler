@@ -33,6 +33,9 @@ class General(ttk.Frame):
         self.teach = HotkeyCapture(self, c["teach_key"])
         row("Learn a correction", self.teach, "press after fixing a dictated word by hand")
 
+        self.undo = HotkeyCapture(self, c["undo_key"])
+        row("Undo last dictation", self.undo, "hold it, or say \"scratch that\" on its own; blank = off")
+
         from ..audio import list_input_devices
         devs = ["System default"] + list_input_devices()
         self.dev = tk.StringVar(value=c["device"] if c["device"] in devs else "System default")
@@ -73,6 +76,9 @@ class General(ttk.Frame):
 
         self.bools = {}
         for key, text in (("cleanup", "Remove fillers and resolve spoken corrections (\"Monday, no wait, Tuesday\")"),
+                          ("spoken_commands", "Spoken commands: a stand-alone \"new line\", \"question mark\", \"open bracket\"..."),
+                          ("smart_format", "Smart formatting: 25%, \u20b9500, john@example.com, main.py"),
+                          ("auto_learn", "Learn automatically when I undo a dictation and say it again"),
                           ("trailing_space", "Add a space after each dictation"),
                           ("enter", "Press Enter after each dictation"),
                           ("sound", "Beep when recording starts and stops"),
@@ -121,8 +127,10 @@ class General(ttk.Frame):
         self.dl.start(self.model.get(), lambda ok, e: self._model_changed() if ok else None)
 
     def collect(self, cfg):
-        Combo(self.key.get()), Combo(self.teach.get())             # raises ValueError on a bad key name
-        cfg.update(key=self.key.get(), teach_key=self.teach.get(), hold_ms=int(self.hold.get()),
+        Combo(self.key.get()), Combo(self.teach.get())
+        if self.undo.get().strip():
+            Combo(self.undo.get())            # raises ValueError on a bad key name
+        cfg.update(key=self.key.get(), teach_key=self.teach.get(), undo_key=self.undo.get().strip(), hold_ms=int(self.hold.get()),
                    device=None if self.dev.get() == "System default" else self.dev.get(),
                    engine=self.engine.get(), model=self.model.get().strip(), unload_after=float(self.unload.get()), paste=self.paste.get(),
                    lang=self.lang.get().strip() or None)

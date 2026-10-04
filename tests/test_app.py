@@ -52,7 +52,7 @@ class Key:
 
 
 for n in ("ctrl", "ctrl_l", "ctrl_r", "alt", "alt_l", "alt_r", "alt_gr", "shift", "shift_l", "shift_r", "cmd", "cmd_l",
-          "cmd_r", "esc", "enter", "home", "end", "left", "f9"):
+          "cmd_r", "esc", "enter", "home", "end", "left", "f9", "backspace"):
     setattr(Key, n, type("K_" + n, (), {"name": n})())
 
 
@@ -222,6 +222,50 @@ app.on_release(WIN); app.on_release(SHIFT); app.on_release(CTRL); time.sleep(0.6
 now = open(os.path.join(app.home, "replacements_pending.json")).read() if os.path.exists(os.path.join(app.home, "replacements_pending.json")) else ""
 check("quick tap of the learn chord does nothing", now == pend_before)
 check("data dir seeded from examples", "x unit => xunit" in rep)
+
+
+# 9. spoken commands + smart formatting reach the pasted text
+def dictate(text, wait=0.8):
+    RAW["v"] = text
+    feed(0.0, 10)
+    app.on_press(CTRL); app.on_press(WIN); time.sleep(0.3); feed(0.1, 20); app.on_release(WIN); app.on_release(CTRL)
+    time.sleep(wait)
+
+
+dictate("Dear team, new paragraph, pay five hundred rupees.")
+check("spoken command + smart format", app.pasted and app.pasted[-1][0] == "Dear team\n\nPay \u20b9500. ")
+
+# 10. undo hotkey (hold Ctrl+Alt+Win) deletes exactly the last paste
+del EVENTS[:]
+npaste = len(app.pasted)
+app.on_press(CTRL); app.on_press(ALT); app.on_press(WIN); time.sleep(0.6)
+app.on_release(WIN); app.on_release(ALT); app.on_release(CTRL); time.sleep(0.5)
+n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
+check("undo hotkey sends one backspace per character", n_bs == len("Dear team\n\nPay \u20b9500. "))
+check("undo pops the paste", len(app.pasted) == npaste - 1)
+
+# 11. quick tap of the undo chord does nothing
+dictate("Keep this sentence.")
+del EVENTS[:]
+app.on_press(CTRL); app.on_press(ALT); app.on_press(WIN); time.sleep(0.05)
+app.on_release(WIN); app.on_release(ALT); app.on_release(CTRL); time.sleep(0.6)
+check("quick tap of the undo chord does nothing", not any(w == "press backspace" for _, w in EVENTS))
+
+# 12. saying "scratch that" on its own undoes, and is not pasted
+del EVENTS[:]
+dictate("Scratch that.")
+n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
+check("spoken 'scratch that' undoes", n_bs == len("Keep this sentence. "))
+
+# 13. undo + say it again: the difference is learned
+dictate("Please review the Flurb module today.")
+app.on_press(CTRL); app.on_press(ALT); app.on_press(WIN); time.sleep(0.6)
+app.on_release(WIN); app.on_release(ALT); app.on_release(CTRL); time.sleep(0.4)
+dictate("Please review the Blurb module today.")
+pend = os.path.join(app.home, "replacements_pending.json")
+rep = open(os.path.join(app.home, "replacements.txt"), encoding="utf-8").read().lower()
+pending = open(pend).read().lower() if os.path.exists(pend) else ""
+check("undo then redo teaches the correction", "flurb" in rep or "flurb" in pending)
 
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)
