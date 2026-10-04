@@ -47,6 +47,8 @@ check("at the rate", full("john at the rate example dot com"), "john@example.com
 check("'look at google.com' untouched", full("Look at google.com"), "Look at google.com")
 check("at the rate with commas", full("Send it to john, at the rate, example dot com"), "Send it to john@example.com")
 check("at the rate of", full("john at the rate of gmail.com"), "john@gmail.com")
+check("fused address in email context", full("Send it to johnatexample.com."), "Send it to john@example.com.")
+check("fused address outside email context", full("Visit whatever.com today"), "Visit whatever.com today")
 check("undo phrase", is_undo("Scratch that."), True)
 check("undo phrase must be alone", is_undo("scratch that and write it again"), False)
 

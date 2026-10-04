@@ -265,7 +265,21 @@ def _at_domain(m, text):
     return m.group(0)
 
 
+_FUSED = re.compile(rf"\b([A-Za-z0-9_.+-]{{3,}}?)at([A-Za-z0-9-]{{3,}}(?:\.[A-Za-z0-9-]+)*\.{_TLD})\b", re.I)
+_FUSE_CONTEXT = {"email", "e-mail", "mail", "send", "sent", "contact", "cc", "bcc", "reach", "address", "forward",
+                 "write"}
+
+
+def _fused(m, text):
+    """Whisper often writes a spoken address as one word: 'johnatexample.com'. Split it only in an email context."""
+    before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-4:]]
+    if not any(w in _FUSE_CONTEXT for w in before) or len(re.findall("at", m.group(0), re.I)) != 1:
+        return m.group(0)
+    return f"{m.group(1)}@{m.group(2)}".lower()
+
+
 def _smart_web(text: str) -> str:
+    text = _FUSED.sub(lambda m: _fused(m, text), text)
     text = _AT_RATE.sub(lambda m: f"{m.group(1)}@{m.group(2)}", text)
     text = _AT_SIGN.sub(lambda m: f"{m.group(1)}@{m.group(2)}", text)
     text = _AT_DOMAIN.sub(lambda m: _at_domain(m, text), text)

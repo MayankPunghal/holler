@@ -12,6 +12,10 @@ def _looks_special(w: str, start_of_sentence: bool) -> bool:
     return w[0].isupper() and not start_of_sentence   # a name in the middle of a sentence
 
 
+def _plain_name(w: str) -> bool:
+    return w[0].isupper() and w[1:].islower()
+
+
 def suggest(log_path: str, known, min_count: int = 3, limit: int = 30):
     """Read dictation_log.tsv (time, raw, final) and return [(term, count)] not already known."""
     try:
@@ -20,7 +24,7 @@ def suggest(log_path: str, known, min_count: int = 3, limit: int = 30):
         return []
     have = {k.lower().lstrip("~") for k in known}
     stop = {"the", "this", "that", "and", "but", "with", "for", "from", "have", "what", "when", "where", "okay"}
-    count, spelling = Counter(), {}
+    count, spelling, plain = Counter(), {}, set()
     for ln in lines:
         parts = ln.split("\t")
         if len(parts) < 3:
@@ -32,9 +36,15 @@ def suggest(log_path: str, known, min_count: int = 3, limit: int = 30):
             start = not pre or pre[-1] in ".!?\n"
             if len(w) < 3 or w.lower() in have or w.lower() in stop or not _looks_special(w, start):
                 continue
+            if "@" in w or re.search(r"\.(com|org|net|io|in|dev|ai|app|co|edu|gov)$", w, re.I):
+                continue                                  # addresses and domains are not vocabulary
             count[w.lower()] += 1
             spelling.setdefault(w.lower(), w)
-    return [(spelling[w], n) for w, n in count.most_common(limit) if n >= min_count]
+            if _plain_name(w):
+                plain.add(w.lower())
+    # a plain capitalised word ("Team") needs more evidence than an identifier ("xUnit", "order_id")
+    return [(spelling[w], n) for w, n in count.most_common(limit)
+            if n >= (min_count + 2 if w in plain else min_count)]
 
 
 MAX_AUTO = 60

@@ -46,6 +46,7 @@ class App:
         self.undo_timer = None
         self.pasted = []                     # (text, time) of recent pastes, newest last, for undo
         self.n_dictations = 0
+        self.last_undo = 0.0
         self.undone = None                   # (text, time) of the dictation the user just undid
         self.tray = tray
         self.download_only = download_only
@@ -174,6 +175,9 @@ class App:
                 print("Undo: nothing to undo.", flush=True)
                 self.overlay.set("noundo")
                 return
+            if time.time() - self.last_undo < 1.5:            # a double trigger must not undo two dictations
+                return
+            self.last_undo = time.time()
             text, _ = self.pasted.pop()
             self._wait_released()
             self.synth = True
@@ -251,7 +255,7 @@ class App:
 
     def _start_undo_timer(self):
         def fire():
-            if self.undo_combo.complete(self.held) and not self.down:
+            if self.undo_combo.complete(self.held) and not self.down and time.time() - self.last_undo > 1.5:
                 self.undo()
         t = threading.Timer(max(self.hold_s, 0.3), fire)
         t.daemon = True
@@ -288,7 +292,8 @@ class App:
         was_talk, was_teach = self.talk.complete(self.held), self.teach_combo.complete(self.held)
         was_undo = bool(self.undo_combo and self.undo_combo.complete(self.held))
         self.held.add(kid)
-        if self.undo_timer and self.undo_combo and not self.undo_combo.includes(kid):
+        if (self.undo_timer and self.undo_combo and not self.undo_combo.includes(kid)
+                and kid not in GROUPS["win"]):            # Win may join: Ctrl+Alt+Win undoes as well
             self.undo_timer.cancel()                      # another key joined: a shortcut, not the undo chord
         if self.undo_combo and self.undo_combo.complete(self.held) and not was_undo:
             self._interrupt_recording()
