@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.4.1
+- `mirror_dir` setting: models you download are also copied to that folder, ready for the release mirror.
 - Multilingual `tiny`, `base` and `medium` added to the catalogue (alongside `small`).
 - `holler export-model FOLDER --all` exports every downloaded catalogue model for mirroring.
 

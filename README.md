@@ -117,6 +117,10 @@ Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, an
 - **Model download blocked by your network.** Holler retries with Windows' own `curl.exe` and, as a last resort, shows the files to download by hand. See *If Hugging Face is unavailable* below.
 - **Problems are logged** to `errors.log` in the data folder.
 
+## Keeping a mirror of the models you download
+
+Set `mirror_dir` in `config.json` (or the `HOLLER_MIRROR_DIR` variable) to a folder. Every catalogue model you download afterwards is also copied there, named `<model>-<file>`, ready to attach to a GitHub release. `holler export-model FOLDER --all` does the same for models you already have.
+
 ## Using your own model
 
 Holler runs [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so it accepts any Whisper model converted to CTranslate2 format: distilled models, fine-tunes for an accent or language, or one you converted yourself. In **Settings > Speech model** (it is an editable box), or `"model"` in `config.json`, enter either:

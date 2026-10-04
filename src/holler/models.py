@@ -197,9 +197,35 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
             except Exception:
                 if os.path.exists(out + ".part"):
                     os.remove(out + ".part")
+    _auto_mirror(name)
     if on_progress:
         on_progress(1.0, "done")
     return dest
+
+
+def export(name: str, folder: str) -> list[str]:
+    """Copy a downloaded catalogue model into `folder`, named <model>-<file> (the layout of the release mirror)."""
+    src = model_dir(name)
+    os.makedirs(folder, exist_ok=True)
+    out = []
+    for f in sorted(os.listdir(src)):
+        if not f.endswith(".part"):
+            shutil.copy2(os.path.join(src, f), os.path.join(folder, f"{name}-{f}"))
+            out.append(f"{name}-{f}")
+    return out
+
+
+def _auto_mirror(name: str):
+    """After a download, copy the model to `mirror_dir` (config.json or HOLLER_MIRROR_DIR) when one is set."""
+    try:
+        folder = os.environ.get("HOLLER_MIRROR_DIR", "").strip()
+        if not folder:
+            from . import config
+            folder = (config.load().get("mirror_dir") or "").strip()
+        if folder and name in MODELS:
+            export(name, os.path.expanduser(folder))
+    except Exception as e:
+        log_error(f"mirror copy of {name} failed: {e}")
 
 
 def manual_instructions(name: str) -> str:

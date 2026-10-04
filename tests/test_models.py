@@ -62,7 +62,26 @@ def test_custom_models():
         pass
 
 
+def test_auto_mirror_after_download():
+    out = tempfile.mkdtemp()
+    os.environ["HOLLER_MIRROR_DIR"] = out
+
+    def fake(url, o, progress, cancel):
+        open(o, "wb").write(b"x")
+        progress(1)
+
+    old = models._py_download
+    models._py_download = fake
+    try:
+        models.download("base.en")
+    finally:
+        models._py_download = old
+        os.environ.pop("HOLLER_MIRROR_DIR")
+    assert os.path.exists(os.path.join(out, "base.en-model.bin")) and os.path.exists(os.path.join(out, "base.en-vocabulary.txt"))
+
+
 if __name__ == "__main__":
+    test_auto_mirror_after_download()
     test_custom_models()
     test_source_order_and_custom_mirror()
     test_falls_back_when_huggingface_is_gone()

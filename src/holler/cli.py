@@ -149,7 +149,6 @@ def main(argv=None) -> int:
         print(f"Imported {k} keyword(s) and {r} correction(s).")
     elif cmd == "export-model":
         import os
-        import shutil
         from . import models
         names = [n for n in models.MODELS if models.is_downloaded(n)] if ns.all else [ns.model or config.load()["model"]]
         if not names:
@@ -160,11 +159,8 @@ def main(argv=None) -> int:
             if name not in models.MODELS or not models.is_downloaded(name):
                 print(f"{name}: not a downloaded catalogue model, skipped.")
                 continue
-            src = models.model_dir(name)
-            for f in sorted(os.listdir(src)):
-                if not f.endswith(".part"):
-                    shutil.copy2(os.path.join(src, f), os.path.join(ns.folder, f"{name}-{f}"))
-                    print(f"{name}-{f}")
+            for f in models.export(name, ns.folder):
+                print(f)
     elif cmd == "doctor":
         from .doctor import run_doctor
         rc = run_doctor()

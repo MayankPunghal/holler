@@ -13,6 +13,7 @@ DEFAULTS = {
     "model": "small.en",
     "beam": 2,
     "model_url": "",             # optional mirror for model downloads (see README); HOLLER_MODEL_URL also works
+    "mirror_dir": "",            # optional: copy every downloaded model here, named for re-hosting (see README)
     "unload_after": 10,          # idle minutes before the model's memory is freed (0 = never)
     "lang": None,                # None = auto (English-only models always use English)
     "device": None,              # microphone: None = system default, else the device name
