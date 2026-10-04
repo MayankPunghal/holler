@@ -114,8 +114,16 @@ Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, an
 - **Run `holler doctor`** (or `py -m holler doctor`). It checks every prerequisite, tests the microphone, and tells you how to fix what's wrong.
 - **Hotkey doesn't work in some app.** Choose a different chord in Settings. Chords of left-side keys are the safest on laptops, many of which lack a Right Ctrl or hide keys behind Fn.
 - **Dictating into an app running as Administrator** requires Holler to run as Administrator too (a Windows rule for all keyboard tools).
-- **Model download blocked by your network.** Holler retries with Windows' own `curl.exe` and, as a last resort, shows the files to download by hand.
+- **Model download blocked by your network.** Holler retries with Windows' own `curl.exe` and, as a last resort, shows the files to download by hand. See *If Hugging Face is unavailable* below.
 - **Problems are logged** to `errors.log` in the data folder.
+
+## If Hugging Face is unavailable
+
+Holler downloads a Whisper model once; after that it runs fully offline. If the download source ever disappears, three fallbacks apply:
+
+1. **Automatic mirror.** Downloads try Hugging Face first, then the copy in this repo's [`models` release](https://github.com/MayankPunghal/holler/releases/tag/models).
+2. **Your own mirror.** Set `model_url` in Settings' `config.json`, or the `HOLLER_MODEL_URL` environment variable, to any server that hosts `<name>/<file>` (e.g. `https://my.host/models` serves `https://my.host/models/small.en/model.bin`). A template with `{name}` and `{file}` also works.
+3. **Manual install.** Put `config.json`, `model.bin`, `tokenizer.json` and `vocabulary.txt` (or `vocabulary.json`) in the model's folder, e.g. `%APPDATA%\Holler\models\small.en\`. `holler where` prints the data folder. Any CTranslate2 Whisper model works the same way, including ones converted yourself with `ct2-transformers-converter`.
 
 ## Development
 

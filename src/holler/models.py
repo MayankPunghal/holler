@@ -40,8 +40,29 @@ def is_downloaded(name: str) -> bool:
         any(os.path.exists(os.path.join(d, f)) for f in VOCAB_FILES)
 
 
-def _url(name, fname):
-    return f"https://huggingface.co/{repo_id(name)}/resolve/main/{fname}"
+HF_URL = "https://huggingface.co/{repo}/resolve/main/{file}"
+# Safety net: the same files re-hosted as release assets named "<model>-<file>" (e.g. small.en-model.bin).
+RELEASE_URL = "https://github.com/MayankPunghal/holler/releases/download/models/{name}-{file}"
+
+
+def sources(name: str) -> list[str]:
+    """URL templates to try, in order: your own mirror, Hugging Face, the GitHub release mirror.
+    A template may use {repo}, {name} and {file}. Set `model_url` in config.json or HOLLER_MODEL_URL."""
+    custom = os.environ.get("HOLLER_MODEL_URL", "").strip()
+    if not custom:
+        try:
+            from . import config
+            custom = (config.load().get("model_url") or "").strip()
+        except Exception:
+            custom = ""
+    out = []
+    if custom:
+        out.append(custom if "{file}" in custom else custom.rstrip("/") + "/{name}/{file}")
+    return out + [HF_URL, RELEASE_URL]
+
+
+def _url(name, fname, template=None):
+    return (template or HF_URL).format(repo=repo_id(name), name=name, file=fname)
 
 
 def _py_download(url, out, progress, cancel):
@@ -104,26 +125,30 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
         last_err = None
         for c in cands:
             out = os.path.join(dest, c)
-            url = _url(name, c)
-            try:
+            for tpl in sources(name):
+                url = _url(name, c, tpl)
                 try:
-                    _py_download(url, out + ".part", progress, cancel)
+                    try:
+                        _py_download(url, out + ".part", progress, cancel)
+                    except InterruptedError:
+                        raise
+                    except Exception as e:
+                        if "404" in str(e):
+                            raise
+                        log_error(f"python download of {c} failed, trying curl")
+                        _curl_download(url, out + ".part", progress, cancel)
+                    os.replace(out + ".part", out)
+                    last_err = None
+                    break
                 except InterruptedError:
                     raise
                 except Exception as e:
-                    if "404" in str(e):
-                        raise
-                    log_error(f"python download of {c} failed, trying curl")
-                    _curl_download(url, out + ".part", progress, cancel)
-                os.replace(out + ".part", out)
-                last_err = None
+                    last_err = e
+                    log_error(f"{url} failed: {e}")
+                    if os.path.exists(out + ".part"):
+                        os.remove(out + ".part")      # a different mirror may not support resuming the same bytes
+            if last_err is None:
                 break
-            except InterruptedError:
-                raise
-            except Exception as e:
-                last_err = e
-                if os.path.exists(out + ".part") and os.path.getsize(out + ".part") == 0:
-                    os.remove(out + ".part")
         if last_err is not None:
             raise RuntimeError(f"Could not download {cands[0]}: {last_err}")
     if on_progress:
@@ -132,5 +157,9 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
 
 
 def manual_instructions(name: str) -> str:
-    return ("Download these files in your browser and put them in\n    " + model_dir(name) + "\n" +
-            "".join(f"    {_url(name, f)}\n" for f in REQUIRED + VOCAB_FILES[:1]))
+    files = REQUIRED + VOCAB_FILES[:1]
+    msg = "Download these files in your browser and put them in\n    " + model_dir(name) + "\n"
+    msg += "".join(f"    {_url(name, f)}\n" for f in files)
+    msg += "If Hugging Face is unavailable, the same files are mirrored here (named <model>-<file>):\n"
+    msg += "".join(f"    {_url(name, f, RELEASE_URL)}\n" for f in files)
+    return msg + "(for the mirror, save each file under its plain name, e.g. model.bin)\n"

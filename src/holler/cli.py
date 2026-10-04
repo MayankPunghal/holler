@@ -8,6 +8,7 @@
     holler autostart on|off|status           start with the computer
     holler doctor        check microphone, model, hotkey, pill
     holler import FOLDER merge keywords/replacements from an older install
+    holler export-model FOLDER   copy the downloaded model out, named for re-hosting
     holler keys          show key names      holler where      show the data folder
 """
 import argparse
@@ -47,6 +48,9 @@ def build_parser():
         sub.add_parser(n, help=h)
     imp = sub.add_parser("import", help="merge keywords/replacements from another folder (e.g. an older install)")
     imp.add_argument("folder")
+    ex = sub.add_parser("export-model", help="copy a downloaded model to FOLDER, named for re-hosting as a mirror")
+    ex.add_argument("folder")
+    ex.add_argument("--model", default=None, help="default: the model in your settings")
     a = sub.add_parser("autostart", help="start with the computer")
     a.add_argument("state", choices=["on", "off", "status"])
     return ap
@@ -142,6 +146,20 @@ def main(argv=None) -> int:
         from .vocab import Vocab
         k, r = Vocab(data_dir(), PACKAGE_DATA).import_from(ns.folder)
         print(f"Imported {k} keyword(s) and {r} correction(s).")
+    elif cmd == "export-model":
+        import os
+        import shutil
+        from . import models
+        name = ns.model or config.load()["model"]
+        if not models.is_downloaded(name):
+            print(f"{name} is not downloaded yet.")
+            return 1
+        os.makedirs(ns.folder, exist_ok=True)
+        src = models.model_dir(name)
+        for f in sorted(os.listdir(src)):
+            if not f.endswith(".part"):
+                shutil.copy2(os.path.join(src, f), os.path.join(ns.folder, f"{name}-{f}"))
+                print(f"{name}-{f}")
     elif cmd == "doctor":
         from .doctor import run_doctor
         rc = run_doctor()

@@ -14,6 +14,7 @@ jobs:
       - run: python tests/test_vocab.py
         env: { PYTHONPATH: src }
       - run: python tests/test_app.py
+      - run: python tests/test_models.py
         env: { PYTHONPATH: src }
       - run: python -m holler.overlay --preview /tmp/previews
         env: { PYTHONPATH: src }

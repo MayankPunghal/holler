@@ -12,6 +12,7 @@ DEFAULTS = {
     "teach_key": "ctrl+shift+win",  # hold to learn from the correction on the current line
     "model": "small.en",
     "beam": 2,
+    "model_url": "",             # optional mirror for model downloads (see README); HOLLER_MODEL_URL also works
     "unload_after": 10,          # idle minutes before the model's memory is freed (0 = never)
     "lang": None,                # None = auto (English-only models always use English)
     "device": None,              # microphone: None = system default, else the device name
