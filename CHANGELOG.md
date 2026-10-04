@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Reliability: Holler now runs under a small supervisor that restarts it if it crashes; it renews the keyboard hook and reopens the microphone after sleep/resume or when they stop responding; output goes to `holler.log` and hard crashes to `crash.log` in the data folder.
 - Undo: hold Ctrl+Alt+Win (`undo_key`) or say "scratch that" on its own to delete the last dictation.
 - Spoken commands (`spoken_commands`): stand-alone "new line", "new paragraph", "question mark", "open bracket" and more become symbols.
 - Smart formatting (`smart_format`): `25%`, `₹500`, `john@example.com`, `github.com/holler`, `main.py`.

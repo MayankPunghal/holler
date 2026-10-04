@@ -35,6 +35,7 @@ class App:
         self.down = False                    # recording
         self.pending = False                 # chord held, waiting out the hold delay
         self.timer = None
+        self.listener = None
         self.synth = False                   # True while WE are sending keystrokes (ignore them)
         self.engine = None
         self.rec = None
@@ -319,11 +320,43 @@ class App:
                 self.down = False
             threading.Thread(target=self.finish, daemon=True).start()
 
+    def _start_listener(self):
+        """(Re)create the global keyboard hook. Windows silently drops a hook after sleep, a lock screen or a slow
+        callback, so Holler renews it instead of trusting it forever."""
+        from pynput import keyboard
+        old, self.listener = self.listener, None
+        if old is not None:
+            try:
+                old.stop()
+            except Exception:
+                pass
+        self.held.clear()
+        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        self.listener.start()
+
     def watchdog(self):
-        """Auto-stop at the recording limit; free the model's memory when idle."""
+        """Auto-stop at the recording limit; free the model's memory when idle; keep the keyboard hook and the
+        microphone alive (they die silently after sleep/resume)."""
+        last_tick, last_renew = time.time(), time.time()
         while True:
             time.sleep(0.5)
+            now = time.time()
+            woke = now - last_tick > 8                     # the computer slept: hook and microphone are suspect
+            last_tick = now
             rec, eng = self.rec, self.engine
+            idle = not self.down and not self.pending and not self.busy.locked()
+            try:
+                if idle and self.listener is not None and (
+                        woke or not self.listener.is_alive() or now - last_renew > 900):
+                    self._start_listener()
+                    last_renew = now
+                    if woke:
+                        print("Keyboard hook renewed.", flush=True)
+                if idle and rec is not None and (woke or not rec.healthy()):
+                    rec.reopen()
+                    print("Microphone reopened.", flush=True)
+            except Exception:
+                log_error("watchdog")
             if self.down and rec is not None and time.time() - rec.t0 > A.MAX_SECONDS:
                 with self.st:
                     self.down = False
@@ -333,10 +366,9 @@ class App:
                 eng.unload()
 
     def run(self):
-        from pynput import keyboard
         threading.Thread(target=self.boot, daemon=True).start()
+        self._start_listener()
         threading.Thread(target=self.watchdog, daemon=True).start()
-        keyboard.Listener(on_press=self.on_press, on_release=self.on_release).start()
         if self.tray:
             from .tray import start_tray
             self.tray = start_tray(self)

@@ -107,19 +107,57 @@ def spawn(*args: str) -> subprocess.Popen:
 def start_background() -> bool:
     if running_pid():
         return False
-    spawn("run")
+    spawn("supervise")
     return True
 
 
 def restart_background():
     stop()
-    spawn("run")
+    spawn("supervise")
+
+
+def supervise(cmd=None, max_crashes: int = 5, window: float = 120.0, delay: float = 2.0) -> int:
+    """Keep Holler running: start `holler run` as a child and start it again if it dies unexpectedly (a crash,
+    or being killed). A normal exit (Quit from the tray) ends the supervisor too. Gives up if the child keeps
+    crashing (max_crashes within `window` seconds) so a real fault can't loop forever."""
+    from .paths import log_error
+    if not claim():
+        print("Holler is already running (stop it with: holler stop).")
+        return 1
+    logf = None
+    try:
+        path = os.path.join(data_dir(), "holler.log")
+        if os.path.exists(path) and os.path.getsize(path) > 1_000_000:
+            os.replace(path, path + ".old")
+        logf = open(path, "a", encoding="utf-8", errors="replace")
+    except OSError:
+        pass
+    cmd = cmd or [sys.executable, "-m", "holler", "run"]
+    env = dict(os.environ, HOLLER_SUPERVISED="1", PYTHONUNBUFFERED="1")
+    crashes = []
+    while True:
+        kw = {"stdin": subprocess.DEVNULL, "stdout": logf or subprocess.DEVNULL, "stderr": subprocess.STDOUT if logf else subprocess.DEVNULL, "env": env}
+        if sys.platform == "win32":
+            kw["creationflags"] = 0x08000000                      # no console window
+        started = time.time()
+        code = subprocess.Popen(cmd, **kw).wait()
+        if code == 0:
+            return 0
+        now = time.time()
+        crashes = [t for t in crashes if now - t < window] + [now]
+        try:
+            raise RuntimeError(f"holler run exited with code {code}; restarting")
+        except RuntimeError:
+            log_error("supervisor")
+        if len(crashes) >= max_crashes:
+            return 1
+        time.sleep(delay if now - started > 5 else delay * 2)
 
 
 # ------------------------------------------------------------------ start with the computer
 
 def _autostart_command() -> str:
-    return f'"{_windowless_python()}" -m holler run'
+    return f'"{_windowless_python()}" -m holler supervise'
 
 
 def autostart_enabled() -> bool:

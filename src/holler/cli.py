@@ -14,6 +14,7 @@
     holler keys          show key names      holler where      show the data folder
 """
 import argparse
+import os
 import sys
 
 from . import __version__, config, process
@@ -48,6 +49,7 @@ def build_parser():
                  ("keys", "print the name of each key you press"),
                  ("where", "print the data folder")):
         sub.add_parser(n, help=h)
+    sub.add_parser("supervise", help="run in the background and restart automatically if it crashes")
     imp = sub.add_parser("import", help="merge keywords/replacements from a folder (older install) or a starter pack")
     imp.add_argument("folder", nargs="?", default=None)
     imp.add_argument("--pack", default=None, help="a bundled starter pack, e.g. web (see: holler packs)")
@@ -84,10 +86,15 @@ def cmd_run(ns) -> int:
         if not run_wizard(launch=False):
             return 1
         cfg = config.settings({d: getattr(ns, d) for _, d, _ in OVERRIDES})
-    if not ns.download_only and not process.claim():
+    if not ns.download_only and not os.environ.get("HOLLER_SUPERVISED") and not process.claim():
         print("Holler is already running (stop it with: holler stop).")
         return 1
     from .app import App
+    try:
+        import faulthandler                  # a hard crash (native library) leaves a trace in crash.log
+        faulthandler.enable(open(os.path.join(data_dir(), "crash.log"), "a"))
+    except (OSError, RuntimeError, ValueError):
+        pass
     try:
         App(cfg, download_only=ns.download_only, tray=not ns.no_tray).run()
     except ValueError as e:                  # bad key name
@@ -133,6 +140,8 @@ def main(argv=None) -> int:
         return cmd_open()
     if cmd == "run":
         return cmd_run(ns)
+    if cmd == "supervise":
+        return process.supervise()
     if cmd == "setup":
         if ns.text:
             from .ui.textsetup import run_text_setup
@@ -252,4 +261,4 @@ def main(argv=None) -> int:
 
 def main_gui() -> int:
     """Entry point without a console window (`holler-gui`): run in the background with the tray icon."""
-    return main(["run"])
+    return main(["supervise"])

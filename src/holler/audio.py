@@ -51,6 +51,7 @@ class Recorder:
         self.pre = None
         self.rate = TARGET_SR
         self.t0 = 0.0
+        self.last_cb = time.time()
         self.stream = self._open()
         self.stream.start()
 
@@ -67,12 +68,26 @@ class Recorder:
         raise RuntimeError("Could not open the microphone")
 
     def _cb(self, indata, frames, t, status):
+        self.last_cb = time.time()
         x = indata[:, 0].copy()
         if self.recording:
             self.chunks.append(x)
             self.on_level(float(np.sqrt(np.mean(x * x))))
         else:
             self.pre.append(x)
+
+    def healthy(self) -> bool:
+        """False if the microphone stream stopped delivering audio (sleep/resume, unplugged or switched device)."""
+        return time.time() - self.last_cb < 3.0 and getattr(self.stream, "active", True)
+
+    def reopen(self):
+        try:
+            self.stream.close()
+        except Exception:
+            pass
+        self.last_cb = time.time()
+        self.stream = self._open()
+        self.stream.start()
 
     def start(self):
         self.chunks = list(self.pre)
