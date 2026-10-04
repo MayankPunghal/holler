@@ -254,22 +254,23 @@ check("default keys have no Win", "win" not in config.DEFAULTS["key"] and "win" 
 with open(config.path(), "w") as f:
     json.dump({"key": "ctrl+win", "teach_key": "ctrl+shift+win"}, f)
 c = config.load()
-check("old ctrl+win settings are migrated", c["key"] == "ctrl+`" and c["teach_key"] == "ctrl+shift+space")
+check("old ctrl+win settings are migrated", c["key"] == "ctrl+shift" and c["teach_key"] == "ctrl+shift+space")
 
-# 13. the default chord: hold Ctrl+` (Windows reports no character for ` while Ctrl is held, only vk 0xC0)
+# 13. the default chord: hold Ctrl+Shift; another key at any point during the recording makes it a shortcut
 from holler.keys import Combo  # noqa: E402
 app.talk, app.teach_combo = Combo(config.DEFAULTS["key"]), Combo(config.DEFAULTS["teach_key"])
-check("default dictation key is ctrl+`", config.DEFAULTS["key"] == "ctrl+`")
-GRAVE = KeyCode(char=None, vk=0xC0)
+check("default dictation key is ctrl+shift", config.DEFAULTS["key"] == "ctrl+shift")
 RAW["v"] = "Default chord works."
 feed(0.0, 10)
-app.on_press(CTRL); app.on_press(GRAVE); time.sleep(0.15); app.on_press(GRAVE); time.sleep(0.15)   # auto-repeat
-feed(0.1, 20); app.on_release(GRAVE); app.on_release(CTRL)
+app.on_press(CTRL); app.on_press(SHIFT); time.sleep(0.3); feed(0.1, 20); app.on_release(SHIFT); app.on_release(CTRL)
 time.sleep(0.8)
-check("Ctrl+` dictation is pasted", PASTED and PASTED[-1] == "Default chord works. ")
+check("Ctrl+Shift dictation is pasted", PASTED and PASTED[-1] == "Default chord works. ")
 n = len(PASTED)
-app.on_press(CTRL); app.on_press(GRAVE); time.sleep(0.05); app.on_release(GRAVE); app.on_release(CTRL); time.sleep(0.5)
-check("a quick Ctrl+` tap does nothing", len(PASTED) == n)
+RAW["v"] = "should not appear"
+RIGHT = Key.left
+app.on_press(CTRL); app.on_press(SHIFT); time.sleep(1.5); feed(0.1, 10); app.on_press(RIGHT); time.sleep(0.1)
+app.on_release(RIGHT); app.on_release(SHIFT); app.on_release(CTRL); time.sleep(0.8)
+check("Ctrl+Shift held, then an arrow (text selection) is not a dictation", len(PASTED) == n)
 
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)

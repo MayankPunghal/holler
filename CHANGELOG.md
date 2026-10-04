@@ -1,12 +1,12 @@
 # Changelog
 
 ## 1.1.0 (in development)
-- New default keys: hold **Ctrl+`** (Ctrl and the key left of 1) to dictate, **Ctrl+Shift+Space** to learn a correction. The old Win-key defaults are switched over automatically: Windows opens the Start menu whenever Win is released, and no workaround was reliable.
+- New default keys: hold **Ctrl+Shift** to dictate, **Ctrl+Shift+Space** to learn a correction. The old Win-key defaults are switched over automatically: Windows opens the Start menu whenever Win is released, and no workaround was reliable.
 - Spoken commands (`spoken_commands`): "new line", "new paragraph", "question mark", "open bracket" and more become symbols when they stand on their own or end a clause; a phrase being talked about ("add a new line") is left alone.
 - Smart formatting (`smart_format`): `25%`, `₹500`, `john@example.com` (also from "at the rate", and "my email id is john.example.com" when Whisper drops the "at"), `github.com/holler`, `main.py`.
 - Automatic vocabulary (`auto_vocab`): identifiers you dictate often (3+ times) are added as glossary-only entries. `holler suggest` previews them; `holler try TEXT` shows what a sentence would paste.
 - Starter vocabulary packs (web, cloud-devops, dotnet, python-data, general-tech), merged once into every vocabulary. `holler packs`, `holler import --pack NAME`.
-- Reliability: a supervisor restarts Holler if it crashes; after sleep the keyboard hook and microphone are renewed and any half-finished state is dropped; "ghost" keys (key-ups the hook never saw, such as after Win+L) are cleared by asking Windows for the real key state; keystrokes injected by software are ignored by the hotkey; a key pressed in the first second of a recording cancels it, so holding the chord before a shortcut doesn't record; output goes to `holler.log`, hard crashes to `crash.log`.
+- Reliability: a supervisor restarts Holler if it crashes; after sleep the keyboard hook and microphone are renewed and any half-finished state is dropped; "ghost" keys (key-ups the hook never saw, such as after Win+L) are cleared by asking Windows for the real key state; keystrokes injected by software are ignored by the hotkey; any other key pressed during a recording cancels it, so shortcuts that share the chord's keys don't record; output goes to `holler.log`, hard crashes to `crash.log`.
 - Short clips (under 2.5 s) are decoded without the glossary, which skewed words such as "First line" into "FirstLine".
 - Removed: undo (hotkey and "scratch that" on its own) and learning from undo + redo. Deleting text with simulated Backspaces could not be made reliable across apps (keys reaching the app, menus, focus), and a wrong undo erases good text. "scratch that" inside a dictation still drops what came before it, and at the end of a dictation it now drops the whole sentence before it (not just the last word).
 

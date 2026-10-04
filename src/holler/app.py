@@ -267,9 +267,8 @@ class App:
                 self._arm()
         elif self.pending and not self.talk.includes(kid):
             self._cancel_pending()                        # a shortcut (Ctrl+Shift+T ...): not a dictation
-        elif (self.down and not self.talk.includes(kid) and self.rec is not None
-              and time.time() - self.rec.t0 < 1.0):
-            self._interrupt_recording()                   # a key right after recording started: a shortcut
+        elif self.down and not self.talk.includes(kid):
+            self._interrupt_recording()                   # another key while recording: a shortcut, not speech
             self.overlay.set("cancelled")
 
     def on_release(self, key):
