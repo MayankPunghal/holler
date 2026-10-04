@@ -51,6 +51,8 @@ check("fused address in email context", full("Send it to johnatexample.com."), "
 check("dropped 'at' after email words", full("My email id is john.example.com"), "My email id is john@example.com")
 check("dotted domain elsewhere untouched", full("Open mail.google.com now"), "Open mail.google.com now")
 check("email id glued to the address", full("Send the email to emailidjohnatexample.com"), "Send the email to john@example.com")
+check("NewParagraph written as one word", full("This is line one. NewParagraph. This is line two."), "This is line one.\n\nThis is line two.")
+check("new-paragraph with a hyphen at clause end", full("It is up by 25% New-Paragraph, next one"), "It is up by 25%\n\nNext one")
 check("stand-alone exclamation", full("This is really fun. Exclamation."), "This is really fun!")
 check("'I said new paragraph' is talked about", full("I said new paragraph, not that."), "I said new paragraph, not that.")
 check("fused address outside email context", full("Visit whatever.com today"), "Visit whatever.com today")

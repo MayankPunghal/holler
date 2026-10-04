@@ -35,9 +35,13 @@ _CLAUSE = re.compile(r"[.,;:!?]+(?=\s|$)|(?:[^.,;:!?]|[.,;:!?](?!\s|$))+")
 _SEP = re.compile(r"[.,;:!?]+$")
 
 
+_SQUASHED = {k.replace(" ", ""): v for k, v in COMMANDS.items()}
+
+
 def _is_cmd(words: str):
+    """A command phrase, however Whisper spelled it: "new paragraph", "New-Paragraph", "NewParagraph"."""
     w = words.strip().lower()
-    return COMMANDS.get(w)
+    return COMMANDS.get(w) or _SQUASHED.get(re.sub(r"[\s-]+", "", w))
 
 
 _TRAILING = ("new paragraph", "new line", "question mark", "exclamation mark", "exclamation point")
@@ -51,8 +55,9 @@ def _split_trailing(p: str):
     Skipped when the word before it shows it is being talked about ('add a new line', 'the question mark')."""
     low = p.strip().lower()
     for ph in _TRAILING:
-        if low.endswith(" " + ph):
-            head = p.strip()[: -len(ph)].rstrip()
+        m = re.search(r"\s(" + r"[\s-]?".join(map(re.escape, ph.split())) + r")$", low)
+        if m:
+            head = p.strip()[: m.start(1)].rstrip()
             prev = head.split()[-1].lower().strip("\"'") if head.split() else ""
             if prev in _NOT_BEFORE:
                 return [p]
