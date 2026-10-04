@@ -297,6 +297,48 @@ class Vocab:
                 self.add_keyword(right)           # also feed the right spelling to Whisper's glossary
             return note + f"learned: {wrong} -> {right}"
 
+    def learn_auto(self, old: str, new: str):
+        """Learn from "undo, then say it again". Much stricter than a deliberate correction, because a new
+        sentence is not a correction: the two takes must be almost the same sentence, differ by one or two
+        words that look alike, contain no numbers, and the same fix must be seen twice before it is applied."""
+        norm = lambda t: t.strip(EDGE).lower()
+        a, b = old.split(), new.split()
+        sm = difflib.SequenceMatcher(None, [norm(x) for x in a], [norm(x) for x in b], autojunk=False)
+        if not a or not b or sm.ratio() < 0.75:
+            return []
+        res = diff_pairs(old, new)
+        if not res or not res[0] or len(res[0]) > 2:
+            return []
+        msgs = []
+        with self.lock:
+            pend = {}
+            try:
+                with open(self.pending_path.replace("replacements_pending", "auto_pending"), encoding="utf-8") as f:
+                    pend = json.load(f)
+            except (OSError, ValueError):
+                pass
+            for wrong, right, _b, _a in res[0]:
+                if re.search(r"\d", wrong + right) or difflib.SequenceMatcher(None, wrong.lower(), right.lower()).ratio() < 0.5:
+                    continue
+                if any(w == len(wrong) and rx.fullmatch(wrong) for w, rx, _r in self.rules):
+                    continue
+                key = f"{wrong.lower()} => {right}"
+                pend[key] = pend.get(key, 0) + 1
+                if pend[key] < 2:
+                    msgs.append(f"noticed once: {wrong} -> {right} (learned if it happens again)")
+                    continue
+                pend.pop(key, None)
+                self._append(self.rep_path, f"{wrong} => {right}")
+                if _enforce(right) or not right.islower():
+                    self.add_keyword(right)
+                msgs.append(f"learned: {wrong} -> {right}")
+            try:
+                with open(self.pending_path.replace("replacements_pending", "auto_pending"), "w", encoding="utf-8") as f:
+                    json.dump(pend, f, indent=1)
+            except OSError:
+                pass
+        return [m for m in msgs if m.startswith("learned")] or []
+
     def learn_from_edit(self, dictated: str, corrected: str):
         """Compare dictated text to its corrected version and learn every difference.
         Returns a list of messages, or None if the two texts are too different."""

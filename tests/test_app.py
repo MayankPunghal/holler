@@ -269,15 +269,20 @@ app.on_release(ALT); app.on_release(WIN); app.on_release(CTRL); time.sleep(0.6)
 n_bs = sum(1 for _, w in EVENTS if w == "press backspace")
 check("Alt during recording undoes and drops the recording", n_bs == len("Another line for undo. ") and len(log_lines()) == n_before)
 
-# 13. undo + say it again: the difference is learned
-dictate("Please review the Flurb module today.")
-app.on_press(CTRL); app.on_press(ALT); time.sleep(0.6)
-app.on_release(ALT); app.on_release(CTRL); time.sleep(0.4)
-dictate("Please review the Blurb module today.")
-pend = os.path.join(app.home, "replacements_pending.json")
+# 13. undo + say it again: the same fix seen twice is learned; a different sentence is not
+UNDO = lambda: (app.on_press(CTRL), app.on_press(ALT), time.sleep(0.6), app.on_release(ALT), app.on_release(CTRL), time.sleep(2.0))
+for _ in range(2):
+    dictate("Please review the Flurb module today.")
+    UNDO()
+    dictate("Please review the Blurb module today.")
+    UNDO()
+dictate("Line two.")
+UNDO()
+dictate("Line three.")
 rep = open(os.path.join(app.home, "replacements.txt"), encoding="utf-8").read().lower()
-pending = open(pend).read().lower() if os.path.exists(pend) else ""
-check("undo then redo teaches the correction", "flurb" in rep or "flurb" in pending)
+check("different sentence after undo is not learned", "two =>" not in rep and "2nd" not in rep)
+pending = rep
+check("undo then redo teaches the correction (seen twice)", "flurb => blurb" in rep)
 
 print("ALL OK" if not bad else f"{bad} FAILED")
 os._exit(1 if bad else 0)

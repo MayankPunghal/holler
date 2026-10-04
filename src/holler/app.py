@@ -11,8 +11,6 @@ from .spoken import apply_commands, is_undo, smart_format
 from . import models
 from .engines import make_engine
 from .keys import GROUPS, Combo, key_id, K
-from difflib import SequenceMatcher
-
 from .output import MASK_VK, backspace, beep, copy_selection, foreground_title, mask_win, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
@@ -155,10 +153,8 @@ class App:
         if not self.cfg.auto_learn or not prev or time.time() - prev[1] > 60:
             return False
         old = prev[0].strip()
-        if old.lower() == text.strip().lower() or SequenceMatcher(None, old.lower(), text.lower()).ratio() < 0.55:
-            return False
         try:
-            msgs = self.vocab.learn_from_edit(old, text.strip())
+            msgs = self.vocab.learn_auto(old, text.strip())
         except Exception:
             log_error("auto-learn")
             return False
@@ -268,7 +264,8 @@ class App:
         """If the chord holds Win or Alt, send a dummy key so releasing it alone never opens Start or a menu bar."""
         if sys.platform == "win32" and combo is not None and any(
                 k in slot for slot in combo.slots for k in GROUPS["win"] | GROUPS["alt"]):
-            mask_win()          # Alt pressed and released alone would highlight the menu bar and eat keystrokes
+            threading.Thread(target=mask_win, daemon=True).start()   # never inject keys inside the hook callback
+            # Alt pressed and released alone would highlight the menu bar and eat keystrokes
 
     def _interrupt_recording(self):
         """A different chord was completed while recording: drop the recording."""
