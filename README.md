@@ -6,7 +6,7 @@
 
 Free, offline, push-to-talk dictation for your desktop. Hold a key, speak, release, and your words appear at the cursor in any app. It learns your jargon, understands when you correct yourself mid-sentence, and runs Whisper on your own CPU: no account, no cloud, no subscription.
 
-[![PyPI](https://img.shields.io/pypi/v/holler)](https://pypi.org/project/holler/)
+[![PyPI](https://img.shields.io/pypi/v/holler?label=PyPI)](https://pypi.org/project/holler/)
 [![Tests](https://github.com/MayankPunghal/holler/actions/workflows/tests.yml/badge.svg)](https://github.com/MayankPunghal/holler/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/MayankPunghal/holler/blob/main/LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)

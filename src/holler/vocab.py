@@ -48,10 +48,12 @@ def _read(path):
 
 
 def _mtime(path):
+    """Change stamp of a file: modification time plus size (Windows can report the same time for two quick writes)."""
     try:
-        return os.path.getmtime(path)
+        st = os.stat(path)
+        return (st.st_mtime_ns, st.st_size)
     except OSError:
-        return 0.0
+        return (0, 0)
 
 
 def diff_pairs(old: str, new: str):

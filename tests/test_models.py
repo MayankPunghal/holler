@@ -6,6 +6,7 @@ import tempfile
 os.environ["HOLLER_HOME"] = tempfile.mkdtemp()
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from holler import models  # noqa: E402
+models.upstream_sha256 = lambda name: {}       # tests never ask Hugging Face (fake bytes would not match)
 
 
 def test_source_order_and_custom_mirror():
@@ -113,6 +114,7 @@ def test_checksum_rejects_bad_mirror_but_accepts_upstream_update():
 def test_pinned_hashes_present():
     import importlib
     importlib.reload(models)
+    models.upstream_sha256 = lambda name: {}
     for n in ("small.en", "base.en", "small"):
         assert len(models.expected_sha256(n, "model.bin")) == 64
 
