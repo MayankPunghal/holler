@@ -110,8 +110,14 @@ class Vocab:
                 except OSError:
                     pass
         self.reload()
-        if seeded and seed_dir:                          # ...plus every bundled starter pack
+        marker = os.path.join(folder, "packs_added.txt")
+        if seed_dir and (seeded or not os.path.exists(marker)):   # ...plus every bundled starter pack, once
             packs = os.path.join(seed_dir, "packs")
+            try:
+                with open(marker, "w") as f:
+                    f.write("starter packs were merged into your vocabulary once; delete this file to merge again\n")
+            except OSError:
+                pass
             for n in sorted(os.listdir(packs)) if os.path.isdir(packs) else []:
                 try:
                     self.import_from(os.path.join(packs, n), front=True)   # glossary reads the END: yours stays last
