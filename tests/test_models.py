@@ -43,7 +43,27 @@ def test_falls_back_when_huggingface_is_gone():
     assert "huggingface" in models.manual_instructions("tiny.en") and "releases" in models.manual_instructions("tiny.en")
 
 
+def test_custom_models():
+    d = tempfile.mkdtemp()
+    for f in ("config.json", "model.bin", "tokenizer.json", "vocabulary.json"):
+        open(os.path.join(d, f), "w").write("x")
+    assert models.is_local(d) and models.is_downloaded(d) and models.model_dir(d) == os.path.abspath(d)
+    assert models.download(d) == os.path.abspath(d)               # nothing to fetch for a local folder
+    assert models.describe(d) == "local folder" and models.describe("small.en") == "catalogue"
+    assert models.describe("owner/name") == "Hugging Face repo"
+    assert models.repo_id("large-v3-turbo") == "mobiuslabsgmbh/faster-whisper-large-v3-turbo"
+    assert models.repo_id("owner/name") == "owner/name"
+    assert models.model_dir("owner/name").endswith("owner_name")
+    empty = tempfile.mkdtemp()
+    try:
+        models.download(empty)
+        raise AssertionError("expected an error")
+    except RuntimeError:
+        pass
+
+
 if __name__ == "__main__":
+    test_custom_models()
     test_source_order_and_custom_mirror()
     test_falls_back_when_huggingface_is_gone()
     print("ok")

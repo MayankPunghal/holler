@@ -40,8 +40,10 @@ class General(ttk.Frame):
 
         self.model = tk.StringVar(value=c["model"])
         names = [n for n, _ in model_choices()]
-        mc = ttk.Combobox(self, textvariable=self.model, values=names, state="readonly", width=14)
+        mc = ttk.Combobox(self, textvariable=self.model, values=names, width=34)
         mc.bind("<<ComboboxSelected>>", lambda e: self._model_changed())
+        mc.bind("<FocusOut>", lambda e: self._model_changed())
+        mc.bind("<Return>", lambda e: self._model_changed())
         row("Speech model", mc)
         self.note = ttk.Label(self, text="", style="Sub.TLabel", wraplength=420, justify="left")
         self.note.grid(row=r, column=1, columnspan=2, sticky="w")
@@ -78,11 +80,16 @@ class General(ttk.Frame):
                                                                                          sticky="w", pady=2)
 
     def _model_changed(self):
-        name = self.model.get()
-        mb, ram, note = models.MODELS.get(name, (0, 0, ""))
+        name = self.model.get().strip()
         have = models.is_downloaded(name)
-        self.note.config(text=f"{note}.  About {ram} MB RAM, {mb} MB download." + ("" if have else "  Not downloaded yet."))
-        if have:
+        if name in models.MODELS:
+            mb, ram, note = models.MODELS[name]
+            text = f"{note}.  About {ram} MB RAM, {mb} MB download."
+        else:
+            text = ("Your own model: " + models.describe(name) + ". Type a Hugging Face repo id (owner/name) or a folder "
+                    "holding a CTranslate2 Whisper model.")
+        self.note.config(text=text + ("" if have else "  Not downloaded yet." if "/" in name or name in models.MODELS else ""))
+        if have or not (name in models.MODELS or "/" in name):
             self.dl.grid_forget(); self.dlbtn.grid_forget()
         else:
             self.dlbtn.grid(row=self.dlrow, column=1, sticky="w", pady=4)
@@ -96,7 +103,7 @@ class General(ttk.Frame):
         Combo(self.key.get()), Combo(self.teach.get())             # raises ValueError on a bad key name
         cfg.update(key=self.key.get(), teach_key=self.teach.get(), hold_ms=int(self.hold.get()),
                    device=None if self.dev.get() == "System default" else self.dev.get(),
-                   model=self.model.get(), unload_after=float(self.unload.get()), paste=self.paste.get(),
+                   model=self.model.get().strip(), unload_after=float(self.unload.get()), paste=self.paste.get(),
                    lang=self.lang.get().strip() or None)
         for k, v in self.bools.items():
             cfg[k] = bool(v.get())

@@ -14,7 +14,8 @@ class WhisperEngine:
 
     def __init__(self, model: str, beam: int):
         self.name, self.beam = model, beam
-        self.english_only = model.endswith(".en")
+        base = os.path.basename(model.rstrip("/\\")).lower()
+        self.english_only = ".en" in base or base.endswith("-en")
         self.m = None
         self.lock = threading.Lock()
         self.last_used = time.time()

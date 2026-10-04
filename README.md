@@ -105,7 +105,7 @@ Settings live in `%APPDATA%\Holler` (`holler where` prints the path): `config.js
 | Gain normalisation, silence detection | quiet mics still work; a muted mic is reported, not guessed |
 | Rule-based post-processing | casing, replacements, fillers and self-corrections cost microseconds, no LLM needed |
 
-Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, and multilingual `small` (Hindi, Hinglish and 90+ languages).
+Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, and multilingual `small` (Hindi, Hinglish and 90+ languages). Two experimental extras: `distil-small.en` and `large-v3-turbo` (more accurate, needs ~1.7 GB RAM).
 
 ## Troubleshooting
 
@@ -116,6 +116,15 @@ Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, an
 - **Dictating into an app running as Administrator** requires Holler to run as Administrator too (a Windows rule for all keyboard tools).
 - **Model download blocked by your network.** Holler retries with Windows' own `curl.exe` and, as a last resort, shows the files to download by hand. See *If Hugging Face is unavailable* below.
 - **Problems are logged** to `errors.log` in the data folder.
+
+## Using your own model
+
+Holler runs [faster-whisper](https://github.com/SYSTRAN/faster-whisper), so it accepts any Whisper model converted to CTranslate2 format: distilled models, fine-tunes for an accent or language, or one you converted yourself. In **Settings > Speech model** (it is an editable box), or `"model"` in `config.json`, enter either:
+
+- a Hugging Face repo id, e.g. `Systran/faster-distil-whisper-large-v3`. It downloads into the models folder like the built-in ones, or
+- a folder on your PC containing `config.json`, `model.bin`, `tokenizer.json` and `vocabulary.txt` (or `.json`).
+
+Models whose names contain `.en` or end in `-en` are treated as English-only. Other engines (Parakeet, Moonshine) are on the roadmap, not supported yet.
 
 ## If Hugging Face is unavailable
 

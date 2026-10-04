@@ -15,12 +15,35 @@ MODELS = {
     "small.en":  (484,  320,  "recommended: accurate on accents and jargon"),
     "medium.en": (1530, 1300, "most accurate English, needs a fast PC and 1.3 GB RAM"),
     "small":     (484,  320,  "multilingual (Hindi, Hinglish, 90+ languages)"),
+    "distil-small.en": (330, 250, "experimental: distilled small.en, faster, slightly less accurate"),
+    "large-v3-turbo": (1620, 1700, "experimental: near large-v3 accuracy, multilingual, needs a fast PC and ~1.7 GB RAM"),
 }
+# Repos for catalogue names that are not Systran/faster-whisper-<name>.
+REPOS = {
+    "large-v3-turbo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
+    "distil-small.en": "Systran/faster-distil-whisper-small.en",
+    "distil-large-v3": "Systran/faster-distil-whisper-large-v3",
+}
+OPTIONAL = ["preprocessor_config.json"]      # needed by some models (e.g. large-v3 family); skipped if absent
 REQUIRED = ["config.json", "model.bin", "tokenizer.json"]
 VOCAB_FILES = ["vocabulary.txt", "vocabulary.json"]       # one of them exists, depending on the model
 
 
+def is_local(name: str) -> bool:
+    """True when `name` is a folder on disk holding your own CTranslate2 Whisper model."""
+    return os.path.isdir(os.path.expanduser(name))
+
+
+def describe(name: str) -> str:
+    """Where a model setting comes from: catalogue, Hugging Face repo id, or local folder."""
+    if name in MODELS:
+        return "catalogue"
+    return "local folder" if is_local(name) else ("Hugging Face repo" if "/" in name else "unknown name")
+
+
 def repo_id(name: str) -> str:
+    if name in REPOS:
+        return REPOS[name]
     if "/" in name:
         return name
     try:
@@ -31,6 +54,8 @@ def repo_id(name: str) -> str:
 
 
 def model_dir(name: str) -> str:
+    if name not in MODELS and is_local(name):
+        return os.path.abspath(os.path.expanduser(name))
     return os.path.join(data_dir(), "models", name.replace("/", "_"))
 
 
@@ -107,6 +132,10 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
     """Download a model into the data folder; returns its folder. on_progress(fraction 0..1, text).
     Python's own HTTPS first; if that is reset (some networks do) retries with curl. Resumes partial files."""
     dest = model_dir(name)
+    if name not in MODELS and is_local(name):
+        if not is_downloaded(name):
+            raise RuntimeError(f"{dest} is missing model files (needs {', '.join(REQUIRED)} and a vocabulary file)")
+        return dest
     os.makedirs(dest, exist_ok=True)
     total = MODELS.get(name, (500,))[0] * 1e6
     done = [0.0]
@@ -151,6 +180,20 @@ def download(name: str, on_progress=None, cancel: threading.Event | None = None)
                 break
         if last_err is not None:
             raise RuntimeError(f"Could not download {cands[0]}: {last_err}")
+    for c in OPTIONAL:
+        out = os.path.join(dest, c)
+        if os.path.exists(out):
+            continue
+        for tpl in sources(name):
+            try:
+                _py_download(_url(name, c, tpl), out + ".part", lambda n: None, cancel)
+                os.replace(out + ".part", out)
+                break
+            except InterruptedError:
+                raise
+            except Exception:
+                if os.path.exists(out + ".part"):
+                    os.remove(out + ".part")
     if on_progress:
         on_progress(1.0, "done")
     return dest
