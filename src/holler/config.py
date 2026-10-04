@@ -10,6 +10,7 @@ DEFAULTS = {
     "key": "ctrl+win",           # key or chord to hold while speaking
     "hold_ms": 350,              # hold time before recording starts (0 = instantly)
     "teach_key": "ctrl+shift+win",  # hold to learn from the correction on the current line
+    "engine": "whisper",         # speech engine (see holler.engines); only whisper is built in for now
     "model": "small.en",
     "beam": 2,
     "model_url": "",             # optional mirror for model downloads (see README); HOLLER_MODEL_URL also works

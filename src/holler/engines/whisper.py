@@ -5,10 +5,12 @@ import time
 
 import numpy as np
 
-from .audio import TARGET_SR
-from . import models
+from .. import models
+from ..audio import TARGET_SR
 
 class WhisperEngine:
+    name = "whisper"
+    supports_hotwords = True
     """Local Whisper through faster-whisper (CTranslate2, int8 on CPU). The model can be unloaded when idle
     (frees ~300 MB) and is re-loaded in the background while you are still speaking."""
 

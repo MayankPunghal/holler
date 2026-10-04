@@ -6,7 +6,7 @@ import time
 from . import audio as A
 from .cleanup import clean
 from . import models
-from .engine import WhisperEngine
+from .engines import make_engine
 from .keys import Combo, key_id, K
 from .output import beep, copy_selection, paste
 from .overlay import make_overlay
@@ -44,14 +44,14 @@ class App:
         a = self.cfg
         try:
             self.overlay.set("loading")
-            self.engine = WhisperEngine(a.model, a.beam)
+            self.engine = make_engine(a.engine, a.model, a.beam)
             if self.download_only:
                 print("Model ready.", flush=True)
                 os._exit(0)
             self.rec = A.Recorder(lambda lv: self.overlay.set("listening", lv), pre_s=A.PRE_ROLL_S + self.hold_s, device=a.device)
             self.overlay.set("ready")
             hold = f" for {a.hold_ms} ms" if self.hold_s else ""
-            print(f"Ready (whisper {a.model}). Hold [{a.key}]{hold} and speak; release to paste. "
+            print(f"Ready ({a.engine} {a.model}). Hold [{a.key}]{hold} and speak; release to paste. "
                   f"Esc cancels. Learn a fix: [{a.teach_key}].", flush=True)
         except Exception:
             log_error("startup")

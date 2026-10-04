@@ -117,6 +117,17 @@ Models: `tiny.en`, `base.en`, `small.en` (default, recommended), `medium.en`, an
 - **Model download blocked by your network.** Holler retries with Windows' own `curl.exe` and, as a last resort, shows the files to download by hand. See *If Hugging Face is unavailable* below.
 - **Problems are logged** to `errors.log` in the data folder.
 
+## Pick the best model for your voice
+
+Leaderboards don't know your accent or your jargon. Measure instead:
+
+```
+py -m holler bench record                       # read ~12 sentences aloud (once)
+py -m holler bench run --models small.en,base.en,small
+```
+
+It prints word error rate, speed and load time per model, and shows the clips each one got wrong. Your vocabulary is included by default (`--no-hotwords` to switch it off; `--raw` skips fixes and cleanup). You can add your own sentences as `NN.wav` + `NN.txt` in the bench folder.
+
 ## Keeping a mirror of the models you download
 
 Set `mirror_dir` in `config.json` (or the `HOLLER_MIRROR_DIR` variable) to a folder. Every catalogue model you download afterwards is also copied there, named `<model>-<file>`, ready to attach to a GitHub release. `holler export-model FOLDER --all` does the same for models you already have.
@@ -150,7 +161,7 @@ Layout: `src/holler/` has `cli`, `app` (hotkey state machine and pipeline), `key
 
 ## Status and roadmap
 
-Holler is in beta and built for Windows 10/11. The logic is tested; the Windows-specific parts (hotkeys, pill, tray, paste) are checked by hand. macOS and Linux are untested. Ideas: NVIDIA Parakeet as an alternative engine, streaming partial text, GPU support, a Windows installer. Issues and pull requests are welcome, and a star helps others find it.
+Holler is in beta and built for Windows 10/11. The logic is tested; the Windows-specific parts (hotkeys, pill, tray, paste) are checked by hand. macOS and Linux are untested. Next: more engines (Parakeet, Moonshine, Qwen3-ASR) as optional extras, chosen with `holler bench`. Ideas: streaming partial text, GPU support, a Windows installer. Issues and pull requests are welcome, and a star helps others find it.
 
 ## Credits
 

@@ -9,6 +9,7 @@
     holler doctor        check microphone, model, hotkey, pill
     holler import FOLDER merge keywords/replacements from an older install
     holler export-model FOLDER   copy the downloaded model out, named for re-hosting
+    holler bench record|run   compare speech models on your own voice
     holler keys          show key names      holler where      show the data folder
 """
 import argparse
@@ -19,7 +20,7 @@ from .paths import data_dir, log_error
 
 OVERRIDES = [  # command-line overrides for `run`; anything left out uses the saved settings
     ("--key", "key", str), ("--hold-ms", "hold_ms", int), ("--teach-key", "teach_key", str),
-    ("--model", "model", str), ("--beam", "beam", int), ("--unload-after", "unload_after", float),
+    ("--engine", "engine", str), ("--model", "model", str), ("--beam", "beam", int), ("--unload-after", "unload_after", float),
     ("--lang", "lang", str), ("--paste", "paste", str), ("--ui", "ui", str), ("--device", "device", str),
 ]
 
@@ -52,6 +53,13 @@ def build_parser():
     ex.add_argument("folder")
     ex.add_argument("--model", default=None, help="default: the model in your settings")
     ex.add_argument("--all", action="store_true", help="export every downloaded catalogue model")
+    bn = sub.add_parser("bench", help="compare speech models on your own voice (record, then run)")
+    bn.add_argument("action", choices=["record", "run"])
+    bn.add_argument("folder", nargs="?", default=None, help="clips folder (default: bench-set in the data folder)")
+    bn.add_argument("--models", default=None, help="comma-separated, e.g. small.en,base.en (default: the model in your settings)")
+    bn.add_argument("--engine", default="whisper")
+    bn.add_argument("--no-hotwords", action="store_true", help="do not give Whisper your vocabulary")
+    bn.add_argument("--raw", action="store_true", help="score the raw transcript (skip vocabulary fixes and cleanup)")
     a = sub.add_parser("autostart", help="start with the computer")
     a.add_argument("state", choices=["on", "off", "status"])
     return ap
@@ -161,6 +169,18 @@ def main(argv=None) -> int:
                 continue
             for f in models.export(name, ns.folder):
                 print(f)
+    elif cmd == "bench":
+        from . import bench
+        folder = ns.folder or bench.default_folder()
+        if ns.action == "record":
+            return bench.record(folder, config.load()["device"])
+        names = [m.strip() for m in (ns.models or config.load()["model"]).split(",") if m.strip()]
+        results = bench.run(folder, names, engine=ns.engine, hotwords=not ns.no_hotwords, pipeline=not ns.raw)
+        print("\n" + bench.table(results))
+        for r in results:
+            for w in r["worst"][:2]:
+                print(f"  [{r['model']}] {w['clip']}: expected \"{w['expected']}\"  got \"{w['got']}\"")
+        print("\nSaved:", bench.save_results(folder, results))
     elif cmd == "doctor":
         from .doctor import run_doctor
         rc = run_doctor()

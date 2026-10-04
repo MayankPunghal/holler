@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0
+- Engines are now plugins (`holler.engines`): Whisper is the first, others register in `ENGINES`. New `engine` setting (default `whisper`).
+- `holler bench record` / `holler bench run --models small.en,base.en`: record a dozen sentences once, then score any models on your own voice and vocabulary (word error rate, speed, load time).
+
 ## 0.4.1
 - Model weights are verified against pinned SHA-256 checksums (`small.en`, `base.en`, `small`); a mirror that serves different bytes is skipped and the next source is tried. Hugging Face itself is trusted: a changed file there is accepted (and noted in errors.log), so upstream updates still work. `HOLLER_SKIP_VERIFY=1` turns it off.
 - `mirror_dir` setting: models you download are also copied to that folder, ready for the release mirror.
