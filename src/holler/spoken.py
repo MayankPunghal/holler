@@ -286,12 +286,21 @@ def _strip_id_words(local: str) -> str:
     return local
 
 
+def _strip_rate(domain: str) -> str:
+    """'at the rate' heard as part of the domain: 'threadexample.com', 'therateexample.com' -> 'example.com'."""
+    low = domain.lower()
+    for w in ("attherate", "therate", "thread", "atrate"):
+        if low.startswith(w) and "." in domain[len(w):] and len(domain[len(w):].split(".")[0]) >= 3:
+            return domain[len(w):]
+    return domain
+
+
 def _fused(m, text):
     """Whisper often writes a spoken address as one word: 'johnatexample.com'. Split it only in an email context."""
     before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-4:]]
     if not any(w in _FUSE_CONTEXT for w in before) or len(re.findall("at", m.group(0), re.I)) != 1:
         return m.group(0)
-    return f"{_strip_id_words(m.group(1))}@{m.group(2)}".lower()
+    return f"{_strip_id_words(m.group(1))}@{_strip_rate(m.group(2))}".lower()
 
 
 _DOTTED = re.compile(rf"\b([A-Za-z][A-Za-z0-9_+-]{{1,30}})\.([A-Za-z0-9-]{{2,}}\.{_TLD})\b(?!@)", re.I)
@@ -303,7 +312,7 @@ def _dotted(m, text):
     before = [w.strip(",.:;").lower() for w in text[: m.start()].split()[-4:]]
     if "@" in text[max(0, m.start() - 1): m.end() + 1] or not any(w in _ID_CONTEXT for w in before):
         return m.group(0)
-    return f"{_strip_id_words(m.group(1))}@{m.group(2)}".lower()
+    return f"{_strip_id_words(m.group(1))}@{_strip_rate(m.group(2))}".lower()
 
 
 def _smart_web(text: str) -> str:

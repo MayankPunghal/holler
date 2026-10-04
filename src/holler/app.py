@@ -345,7 +345,7 @@ class App:
         self.held.add(kid)
         self.held_t.setdefault(kid, time.time())
         if not self.talk.includes(kid) and not self.teach_combo.includes(kid):
-            self._touched("you typed since")
+            self._touched(f"you pressed {getattr(kid, 'name', kid)!r} since")
         if self.teach_combo.complete(self.held) and not was_teach:
             self._interrupt_recording()
             if self.teach_combo.modifier_only:            # hold it briefly, like the dictation chord
