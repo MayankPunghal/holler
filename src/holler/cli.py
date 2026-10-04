@@ -128,7 +128,7 @@ def cmd_keys():
     def show(k):
         print("key:", key_name(k), flush=True)
         return k != keyboard.Key.esc
-    print("Press keys to see their names (Esc quits). Join with +, e.g. ctrl+win", flush=True)
+    print("Press keys to see their names (Esc quits). Join with +, e.g. ctrl+shift", flush=True)
     with keyboard.Listener(on_press=show) as lst:
         lst.join()
 

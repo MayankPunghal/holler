@@ -597,7 +597,7 @@ def make_previews(outdir: str):
 
 
 def demo():
-    ov = make_overlay(True, "ctrl+win", "auto", log=None)
+    ov = make_overlay(True, "ctrl+shift", "auto", log=None)
     print("Indicator in use:", type(ov).__name__, "(LayeredPill = the modern pill)", flush=True)
 
     def feed():

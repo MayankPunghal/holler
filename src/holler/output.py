@@ -85,31 +85,3 @@ def copy_selection(whole_line: bool = False) -> str:
         pyperclip.copy(old)
     return sel
 
-
-MASK_VK = 0xE8        # an unassigned virtual key (the one AutoHotkey uses for the same trick)
-
-
-def mask_win():
-    """Windows opens the Start menu or search when the Win key is released alone. A keystroke sent while Win is
-    held makes Windows treat it as a shortcut, so releasing Ctrl and Win unevenly no longer opens Start."""
-    if sys.platform != "win32":
-        return
-    try:
-        k = keyboard.KeyCode.from_vk(MASK_VK)
-        kb.press(k)
-        kb.release(k)
-    except Exception:
-        pass
-
-
-
-def release_win_masked(vk: int):
-    """Finish a Win key-up that Holler held back: send the mask key first, then the Win key-up, so Windows
-    sees a shortcut instead of a lone Win press and does not open the Start menu."""
-    try:
-        m = keyboard.KeyCode.from_vk(MASK_VK)
-        kb.press(m)
-        kb.release(m)
-        kb.release(keyboard.Key.cmd_r if vk == 0x5C else keyboard.Key.cmd_l)
-    except Exception:
-        pass

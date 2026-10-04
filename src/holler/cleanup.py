@@ -96,6 +96,18 @@ def _clause_start(pre):
     return start
 
 
+_ABBREV = {"no.", "nos.", "mr.", "mrs.", "ms.", "dr.", "st.", "vs.", "etc.", "e.g.", "i.e.", "approx.", "dept."}
+
+
+def _sentence_start(pre):
+    """Index of the first word of the sentence that `pre` ends in ("Line No. 2" is one sentence)."""
+    start = 0
+    for j in range(len(pre) - 1):
+        if pre[j][-1:] in ".?!" and pre[j].lower() not in _ABBREV:
+            start = j + 1
+    return start
+
+
 def _anchor(pre, post):
     """Index in `pre` where the replacement should begin, or None."""
     pn, qn = [_norm(t) for t in pre], [_norm(t) for t in post]
@@ -154,8 +166,8 @@ def resolve_corrections(tokens):
             continue
 
         if not post:
-            if cue in SCRATCH:  # "... scratch that" deletes the last clause
-                pre = pre[: _clause_start(pre)]
+            if cue in SCRATCH:  # "... scratch that" at the end deletes the whole sentence before it
+                pre = pre[: _sentence_start(pre)]
             tokens, scan = _strip_tail(list(pre)), len(pre)
             continue
 

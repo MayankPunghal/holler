@@ -11,7 +11,7 @@ from .spoken import apply_commands, smart_format
 from . import models
 from .engines import make_engine
 from .keys import GROUPS, Combo, key_id, K, physically_down
-from .output import MASK_VK, beep, copy_selection, paste, release_win_masked
+from .output import beep, copy_selection, paste
 from .overlay import make_overlay
 from .paths import PACKAGE_DATA, data_dir, log_error
 from .vocab import Vocab, align
@@ -35,7 +35,6 @@ class App:
         self.pending = False                 # chord held, waiting out the hold delay
         self.timer = None
         self.listener = None
-        self.win_used = False                # a Holler chord used the Win key: hold back its key-up (Start menu)
         self.synth = False                   # True while WE are sending keystrokes (ignore them)
         self.engine = None
         self.rec = None
@@ -88,7 +87,6 @@ class App:
         t0 = time.time()
         while time.time() - t0 < timeout and (self._prune_held() or True) and any(self.talk.includes(k) or self.teach_combo.includes(k) for k in self.held):
             time.sleep(0.02)
-        time.sleep(0.05)                          # let a replayed Win key-up land before we paste
 
     def finish(self):
         a = self.cfg
@@ -212,24 +210,10 @@ class App:
         self.teach_timer = t
         t.start()
 
-    def _mask(self, combo):
-        """A chord with Win was used: when Win comes up, Holler holds that key-up back and replays it after a
-        dummy key, so Windows never opens the Start menu (see _filter)."""
-        if sys.platform == "win32" and combo is not None and any(
-                k in slot for slot in combo.slots for k in GROUPS["win"]):
-            self.win_used = True
-
     def _filter(self, msg, data):
-        """Windows hook filter, runs before the callbacks. False = don't pass the event to Holler."""
-        if data.flags & 0x10:                              # LLKHF_INJECTED: our own paste/mask keys, other tools
-            return False
-        if self.win_used and data.vkCode in (0x5B, 0x5C) and msg in (0x0101, 0x0105):   # Win key-up
-            self.win_used = False
-            self.on_release(K.cmd_r if data.vkCode == 0x5C else K.cmd_l)    # Holler still sees the release
-            threading.Thread(target=release_win_masked, args=(data.vkCode,), daemon=True).start()
-            if self.listener is not None:
-                self.listener.suppress_event()             # the real key-up is replayed after the mask key
-        return True
+        """Windows hook filter: ignore keystrokes injected by software (Holler's own paste, other tools), so they
+        can never start a dictation or leave a 'ghost' held key. Nothing is sent or suppressed."""
+        return not (data.flags & 0x10)                     # LLKHF_INJECTED
 
     def _interrupt_recording(self):
         """A different chord was completed while recording: drop the recording."""
@@ -241,7 +225,7 @@ class App:
             self.overlay.set("hide")
 
     def on_press(self, key):
-        if self.synth or getattr(key, "vk", None) in (0, MASK_VK, 0xFF):
+        if self.synth or getattr(key, "vk", None) in (0, 0xFF):
             return
         kid = key_id(key)
         if not kid:
@@ -260,7 +244,6 @@ class App:
         self.held_t.setdefault(kid, time.time())
         if self.teach_combo.complete(self.held) and not was_teach:
             self._interrupt_recording()
-            self._mask(self.teach_combo)
             if self.teach_combo.modifier_only:            # hold it briefly, like the dictation chord
                 self._start_teach_timer()
             else:
@@ -272,7 +255,6 @@ class App:
                 if extra:
                     print(f"Ignored {self.talk}: other keys are held: {extra}", flush=True)
                 return                                    # extra keys held: this is some other shortcut
-            self._mask(self.talk)
             with self.st:
                 if self.down or self.pending:
                     return
@@ -284,14 +266,14 @@ class App:
             if self.hold_s <= 0:
                 self._arm()
         elif self.pending and not self.talk.includes(kid):
-            self._cancel_pending()                        # a shortcut (Ctrl+Win+Left ...): not a dictation
+            self._cancel_pending()                        # a shortcut (Ctrl+Shift+T ...): not a dictation
         elif (self.down and not self.talk.includes(kid) and self.rec is not None
               and time.time() - self.rec.t0 < 1.0):
             self._interrupt_recording()                   # a key right after recording started: a shortcut
             self.overlay.set("cancelled")
 
     def on_release(self, key):
-        if self.synth or getattr(key, "vk", None) in (0, MASK_VK, 0xFF):
+        if self.synth or getattr(key, "vk", None) in (0, 0xFF):
             return
         kid = key_id(key)
         was_talk = self.talk.complete(self.held)
@@ -323,7 +305,7 @@ class App:
         self.held_t.clear()
         kw = {}
         if sys.platform == "win32":
-            # Ignore keystrokes that software injects (Holler's own paste and mask key, other tools): only real
+            # Ignore keystrokes that software injects (Holler's own paste, other tools): only real
             # key presses can start a dictation, and injected events can never leave a 'ghost' held key.
             kw["win32_event_filter"] = self._filter
         self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release, **kw)

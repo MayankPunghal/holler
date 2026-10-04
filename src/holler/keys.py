@@ -1,4 +1,4 @@
-"""Hotkeys: a key or a chord of keys, e.g. "ctrl+win", "f9", "ctrl+shift+win".
+"""Hotkeys: a key or a chord of keys, e.g. "ctrl+shift", "f9", "ctrl+shift+space".
 
 Modifier names match either side (ctrl = left or right). A few modifier names are specific: "ctrl_r", "alt_gr".
 """
@@ -49,12 +49,12 @@ class Combo:
             elif len(part) == 1:
                 self.slots.append(frozenset({part}))
             else:
-                raise ValueError(f"Unknown key '{part}' in '{spec}'. Try f9, insert, scroll_lock, ctrl+win, "
+                raise ValueError(f"Unknown key '{part}' in '{spec}'. Try f9, insert, scroll_lock, ctrl+shift, "
                                  "ctrl+alt, ctrl+shift+space ... (run: holler keys, to see key names)")
 
     @property
     def modifier_only(self) -> bool:
-        """True for chords like ctrl+shift+win: holding them never types a character in any app."""
+        """True for chords like ctrl+shift: holding them never types a character in any app."""
         mods = set().union(*GROUPS.values())
         return all(slot <= mods for slot in self.slots)
 
