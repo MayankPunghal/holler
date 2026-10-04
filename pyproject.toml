@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "holler"
+version = "0.3.0"
+description = "Free, offline push-to-talk dictation: hold a key, speak, and your words appear in any app. Local Whisper, no cloud, learns your jargon."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Mayank Punghal" }]
+keywords = ["dictation", "speech-to-text", "voice-typing", "whisper", "faster-whisper", "push-to-talk",
+            "offline", "stt", "voice-input", "wispr-flow-alternative"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+    "faster-whisper>=1.0.3",
+    "numpy",
+    "Pillow",
+    "pynput",
+    "pyperclip",
+    "pystray",
+    "sounddevice",
+    "soxr",
+]
+
+[project.urls]
+Homepage = "https://github.com/MayankPunghal/holler"
+Issues = "https://github.com/MayankPunghal/holler/issues"
+
+[project.scripts]
+holler = "holler.cli:main"
+
+[project.gui-scripts]
+holler-gui = "holler.cli:main_gui"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+holler = ["data/*.txt"]

@@ -1,0 +1,81 @@
+# Terms Whisper should favour. One per line; lines starting with # are ignored.
+#  - Every term here is given to Whisper as a glossary, so it prefers these spellings.
+#  - Terms that look like identifiers / acronyms / proper names (xUnit, gRPC, Program.cs, SQL Server, .NET 8)
+#    are also rewritten to this exact spelling whenever they appear in the output.
+#  - Start a line with ~ to use a term as glossary only (no rewriting), e.g. ~REST.
+#  - Whisper only reads the END of a long glossary, so put the most important terms LAST.
+#    Terms you teach it by correcting a dictation are added at the bottom automatically.
+~Refactor
+~microservices
+~monolith
+~middleware
+~dependency injection
+~async
+~await
+~REST
+~Lambda
+~Docker
+~Dockerfile
+~Kubernetes
+~Blazor
+~Razor
+~Dapper
+~Serilog
+~Swagger
+~MediatR
+~AutoMapper
+~NuGet
+~LINQ
+.NET Framework
+.NET 8
+.NET 10
+ASP.NET Core
+Entity Framework Core
+EF Core
+Web API
+minimal API
+Visual Studio
+VS Code
+GitHub
+SQL Server
+WCF
+gRPC
+OpenAPI
+OAuth
+JWT
+DTO
+DTOs
+xUnit
+NUnit
+Moq
+ConfigureAwait
+AddScoped
+AddSingleton
+AddTransient
+NullReferenceException
+TimeoutException
+appsettings.json
+Program.cs
+Startup.cs
+System.Web
+HttpContext.Current
+AWS
+EC2
+ECS
+EKS
+RDS
+S3
+IAM
+VPC
+DynamoDB
+CloudFormation
+CloudWatch
+Terraform
+API Gateway
+Fargate
+YAML
+JSON
+Claude
+Claude Code
+Claude Desktop
+Anthropic

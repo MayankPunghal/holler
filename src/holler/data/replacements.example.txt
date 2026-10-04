@@ -1,0 +1,18 @@
+# Fixes applied to every dictation, one per line:   what Whisper wrote => what you meant
+# Whole words/phrases only, case-insensitive. Edit freely; changes apply without a restart.
+# When you correct a dictation and press the teach key (F8), new lines are added here automatically.
+# Careful with single common words (e.g. "details"): they would be rewritten everywhere.
+pre-factor => refactor
+asb.net => ASP.NET
+asp dot net => ASP.NET
+dot net => .NET
+http-context.current => HttpContext.Current
+http context.current => HttpContext.Current
+scopedinprogram.cs => scoped in Program.cs
+mach => Moq
+null difference => null reference
+contracts as details => contracts as DTOs
+try to docker for => write a Dockerfile for
+x unit => xUnit
+e f core => EF Core
+g rpc => gRPC
