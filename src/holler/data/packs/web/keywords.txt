@@ -1,0 +1,30 @@
+JavaScript
+TypeScript
+Node.js
+React
+Next.js
+Vue
+Angular
+Svelte
+Tailwind CSS
+Webpack
+Vite
+npm
+pnpm
+GraphQL
+WebSocket
+OAuth
+JWT
+CORS
+CSS
+HTML
+JSON
+~REST API
+Express
+Redux
+Vercel
+Cypress
+Playwright
+Jest
+ESLint
+Prettier

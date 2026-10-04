@@ -1,0 +1,5 @@
+get hub => GitHub
+git hub => GitHub
+git lab => GitLab
+v s code => VS Code
+vs code => VS Code

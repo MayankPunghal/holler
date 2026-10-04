@@ -1,0 +1,26 @@
+Python
+pip
+NumPy
+pandas
+SciPy
+Matplotlib
+scikit-learn
+PyTorch
+TensorFlow
+Jupyter
+FastAPI
+Flask
+Django
+pytest
+Pydantic
+SQLAlchemy
+Hugging Face
+Whisper
+LLM
+RAG
+Polars
+Spark
+Airflow
+dbt
+Snowflake
+BigQuery

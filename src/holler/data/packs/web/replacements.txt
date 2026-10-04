@@ -1,0 +1,7 @@
+java script => JavaScript
+type script => TypeScript
+node js => Node.js
+next js => Next.js
+graph ql => GraphQL
+web socket => WebSocket
+tail wind => Tailwind

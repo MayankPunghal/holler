@@ -1,0 +1,8 @@
+cube control => kubectl
+cube cuddle => kubectl
+kubernetes => Kubernetes
+docker file => Dockerfile
+terra form => Terraform
+github actions => GitHub Actions
+post gress => PostgreSQL
+postgres sql => PostgreSQL

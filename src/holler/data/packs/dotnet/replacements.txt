@@ -1,0 +1,5 @@
+c sharp => C#
+see sharp => C#
+asp dot net => ASP.NET
+dot net => .NET
+entity framework => Entity Framework

@@ -1,0 +1,24 @@
+GitHub
+GitLab
+Bitbucket
+Jira
+Confluence
+Slack
+Microsoft Teams
+Zoom
+VS Code
+Visual Studio
+Stack Overflow
+pull request
+code review
+standup
+sprint
+backlog
+Scrum
+Kanban
+API
+SDK
+CLI
+SaaS
+OKR
+KPI

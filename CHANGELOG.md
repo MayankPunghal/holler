@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+- Starter vocabulary packs (web, cloud-devops, dotnet, python-data, general-tech) are seeded on first run, so Holler is useful out of the box. New `holler packs` and `holler import --pack NAME`.
+- README: how the vocabulary is built, import example.
+
 ## 1.0.0
 - First release on PyPI (`pip install holler`). Everything from 0.3 to 0.7: background mode with tray, setup wizard and Settings, model mirrors with checksums, custom models, engine plugins, `holler bench`, optional Parakeet engine, Hinglish prompt support.
 - Known issue: the status pill can stay hidden behind Claude Desktop's window on some setups.

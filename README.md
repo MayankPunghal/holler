@@ -160,7 +160,17 @@ Whisper itself doesn't learn, so Holler learns the words around it, three ways:
 
 A fix that includes a neighbouring word ("null difference" → "null reference") is learned immediately. A fix to a single ordinary word is learned after you correct it twice, so one odd correction can't break a normal word everywhere.
 
-Moving from an older install? `holler import FOLDER` merges its `keywords.txt` and `replacements.txt` into your current vocabulary.
+**Ready out of the box.** On first run Holler seeds your vocabulary with the examples plus starter packs for web, cloud/DevOps, .NET, Python/data and general tech work (about 170 terms and 40 corrections, such as "cube control" → `kubectl`). They are plain text files in your data folder, so edit or delete anything you don't want. List the packs with `holler packs` and re-add one with `holler import --pack web`.
+
+**How the vocabulary is built.** It is never rebuilt automatically. It starts from the seed above and grows only from what you add: the Vocabulary tab, corrections you teach (methods 2 and 3), and imports. Whisper only reads the *end* of a long glossary, so your own newest terms go last and always win.
+
+**Moving from an older install?** Merge its vocabulary, safely repeatable:
+
+```
+holler import C:\Users\you\Documents\old-install-folder
+```
+
+It reads that folder's `keywords.txt` and `replacements.txt` and adds only what you don't already have.
 
 ## Configuration reference
 
@@ -205,6 +215,8 @@ Environment variables: `HOLLER_HOME` (data folder), `HOLLER_MODEL_URL`, `HOLLER_
 | `holler keys` | Print the name of each key you press |
 | `holler where` | Print the data folder |
 | `holler import FOLDER` | Merge vocabulary from an older install |
+| `holler import --pack NAME` | Add a bundled starter pack |
+| `holler packs` | List starter packs |
 | `holler export-model FOLDER [--model NAME \| --all]` | Copy downloaded models out, named for re-hosting |
 | `holler bench record\|run` | Compare models on your own voice (see below) |
 | `holler --version` | Show the version |

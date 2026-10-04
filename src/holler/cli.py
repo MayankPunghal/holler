@@ -7,7 +7,7 @@
     holler start / stop / restart / status   background control
     holler autostart on|off|status           start with the computer
     holler doctor        check microphone, model, hotkey, pill
-    holler import FOLDER merge keywords/replacements from an older install
+    holler import FOLDER|--pack NAME merge keywords/replacements from an older install
     holler export-model FOLDER   copy the downloaded model out, named for re-hosting
     holler bench record|run   compare speech models on your own voice
     holler keys          show key names      holler where      show the data folder
@@ -47,8 +47,10 @@ def build_parser():
                  ("keys", "print the name of each key you press"),
                  ("where", "print the data folder")):
         sub.add_parser(n, help=h)
-    imp = sub.add_parser("import", help="merge keywords/replacements from another folder (e.g. an older install)")
-    imp.add_argument("folder")
+    imp = sub.add_parser("import", help="merge keywords/replacements from a folder (older install) or a starter pack")
+    imp.add_argument("folder", nargs="?", default=None)
+    imp.add_argument("--pack", default=None, help="a bundled starter pack, e.g. web (see: holler packs)")
+    sub.add_parser("packs", help="list the bundled starter vocabulary packs")
     ex = sub.add_parser("export-model", help="copy a downloaded model to FOLDER, named for re-hosting as a mirror")
     ex.add_argument("folder")
     ex.add_argument("--model", default=None, help="default: the model in your settings")
@@ -152,10 +154,30 @@ def main(argv=None) -> int:
         else:
             print("OK" if process.set_autostart(ns.state == "on") else "Could not change it on this system.")
     elif cmd == "import":
+        import os
         from .paths import PACKAGE_DATA
         from .vocab import Vocab
-        k, r = Vocab(data_dir(), PACKAGE_DATA).import_from(ns.folder)
+        folder = ns.folder
+        if ns.pack:
+            folder = os.path.join(PACKAGE_DATA, "packs", ns.pack)
+            if not os.path.isdir(folder):
+                print(f"No pack called {ns.pack!r}. See: holler packs")
+                return 1
+        if not folder:
+            print("Give a folder to import, or --pack NAME (see: holler packs).")
+            return 1
+        if not os.path.isdir(folder):
+            print(f"Folder not found: {folder}")
+            return 1
+        k, r = Vocab(data_dir(), PACKAGE_DATA).import_from(folder)
         print(f"Imported {k} keyword(s) and {r} correction(s).")
+    elif cmd == "packs":
+        import os
+        from .paths import PACKAGE_DATA
+        root = os.path.join(PACKAGE_DATA, "packs")
+        for n in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+            print(" ", n)
+        print("Add one with: holler import --pack NAME")
     elif cmd == "export-model":
         import os
         from . import models

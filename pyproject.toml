@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "holler"
-version = "1.0.0"
+version = "1.0.1"
 description = "Free, offline push-to-talk dictation: hold a key, speak, and your words appear in any app. Local Whisper, no cloud, learns your jargon."
 readme = "README.md"
 license = { text = "MIT" }
@@ -49,4 +49,4 @@ holler-gui = "holler.cli:main_gui"
 where = ["src"]
 
 [tool.setuptools.package-data]
-holler = ["data/*.txt", "data/*.json"]
+holler = ["data/*.txt", "data/*.json", "data/packs/*/*.txt"]

@@ -25,7 +25,7 @@ check("system.web/httpcontext", A("This legacy code uses system.web and http-con
 check("dtos", A("keep the existing data contracts as details."), "keep the existing data contracts as DTOs.")
 check("dockerfile", A("Try to Docker for a .NET 8 application that targets Linux"), "Write a Dockerfile for a .NET 8 application that targets Linux")
 check("dotnet casing", A("move it to .net 8 on aws"), "move it to .NET 8 on AWS")
-check("REST untouched", A("take a rest, then test the rest api"), "take a rest, then test the rest api")
+check("REST untouched", A("take a rest, then test the rest api"), "take a rest, then test the rest API")
 check("ordinary words untouched", A("the lambda function is in the program"), "the lambda function is in the program")
 check("prompt keeps newest last", v.prompt_terms(80)[-1], "Anthropic")
 
@@ -68,4 +68,12 @@ finally:
 
 check("diff: identifier-style casing only", diff_pairs("use xunit here", "use xUnit here"), ([], ["xUnit"]))
 check("diff: sentence case ignored", diff_pairs("use it here", "Use it here"), ([], []))
+# starter packs are seeded on first run and importable
+_d = tempfile.mkdtemp()
+_v = Vocab(_d, PACKAGE_DATA)
+_ks = {k.lstrip("~").lower() for k in _v.keyword_list()}
+check("packs seeded", {"kubernetes", "tailwind css", "pytest"} <= _ks, True)
+check("pack replacement", _v.apply("use cube control"), "use kubectl")
+check("pack import idempotent", _v.import_from(os.path.join(PACKAGE_DATA, "packs", "web")), (0, 0))
+
 raise SystemExit(bad)

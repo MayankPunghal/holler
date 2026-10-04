@@ -1,0 +1,27 @@
+.NET 8
+ASP.NET Core
+C#
+Entity Framework
+EF Core
+LINQ
+Blazor
+Razor
+NuGet
+xUnit
+NUnit
+Moq
+Dapper
+Serilog
+MediatR
+AutoMapper
+SignalR
+gRPC
+Swagger
+appsettings.json
+Program.cs
+Startup.cs
+DbContext
+IEnumerable
+Visual Studio
+Azure DevOps
+SQL Server

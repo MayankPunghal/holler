@@ -1,0 +1,33 @@
+Kubernetes
+kubectl
+Docker
+Dockerfile
+Docker Compose
+Terraform
+Ansible
+Helm
+Jenkins
+GitHub Actions
+GitLab CI
+CI/CD
+AWS
+Amazon S3
+EC2
+Lambda
+DynamoDB
+CloudFormation
+CloudWatch
+IAM
+VPC
+Azure
+GCP
+Prometheus
+Grafana
+Nginx
+Redis
+Kafka
+RabbitMQ
+PostgreSQL
+MySQL
+MongoDB
+YAML

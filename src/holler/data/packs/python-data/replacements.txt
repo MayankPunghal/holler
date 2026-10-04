@@ -1,0 +1,7 @@
+num pie => NumPy
+pandas data frame => pandas DataFrame
+sigh kit learn => scikit-learn
+pie torch => PyTorch
+pie test => pytest
+fast api => FastAPI
+hugging face => Hugging Face

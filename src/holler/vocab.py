@@ -100,14 +100,23 @@ class Vocab:
         self.pending_path = os.path.join(folder, "replacements_pending.json")
         self.lock = threading.RLock()
         self._stamp = None
+        seeded = False
         for p in (self.kw_path, self.rep_path):          # first run: start from the shipped examples
             ex = os.path.join(seed_dir or folder, os.path.basename(p)[:-4] + ".example.txt")
             if not os.path.exists(p) and os.path.exists(ex):
                 try:
                     shutil.copyfile(ex, p)
+                    seeded = True
                 except OSError:
                     pass
         self.reload()
+        if seeded and seed_dir:                          # ...plus every bundled starter pack
+            packs = os.path.join(seed_dir, "packs")
+            for n in sorted(os.listdir(packs)) if os.path.isdir(packs) else []:
+                try:
+                    self.import_from(os.path.join(packs, n), front=True)   # glossary reads the END: yours stays last
+                except OSError:
+                    pass
 
     # ---- loading
     def _files_stamp(self):
@@ -171,7 +180,7 @@ class Vocab:
                 f.write("".join(f"{w.strip()} => {r.strip()}\r\n" for w, r in pairs if w.strip() and r.strip()))
             self.reload()
 
-    def import_from(self, folder: str):
+    def import_from(self, folder: str, front: bool = False):
         """Merge keywords and replacements from another folder (e.g. an older install). Returns (keywords, rules) added."""
         old = Vocab.__new__(Vocab)
         old.lock = threading.RLock()
@@ -182,7 +191,7 @@ class Vocab:
         have_r = {w.lower() for w, _ in self.rule_list()}
         new_r = [(w, r) for w, r in old.rule_list() if w.lower() not in have_r]
         if new_k:
-            self.set_keywords(self.keyword_list() + new_k)
+            self.set_keywords(new_k + self.keyword_list() if front else self.keyword_list() + new_k)
         if new_r:
             self.set_rules(self.rule_list() + new_r)
         return len(new_k), len(new_r)
