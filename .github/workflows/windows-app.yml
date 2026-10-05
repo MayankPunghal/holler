@@ -32,8 +32,10 @@ jobs:
         run: |
           $v = (& dist\Holler\holler-cli.exe --version)
           Write-Host "version: $v"
-          & dist\Holler\holler-cli.exe selftest --model tiny.en
-          if ($LASTEXITCODE -ne 0) { throw "selftest failed" }
+          $out = (& dist\Holler\holler-cli.exe selftest --model tiny.en 2>&1) -join "%0A"
+          $code = $LASTEXITCODE
+          Write-Host "::notice title=selftest::$out"
+          if ($code -ne 0) { throw "selftest failed" }
 
       - name: Build the installer
         shell: pwsh
