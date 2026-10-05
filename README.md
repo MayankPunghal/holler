@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="https://raw.githubusercontent.com/MayankPunghal/holler/main/docs/logo.png" width="96" alt="Holler logo">
+
 # Holler
 
 **Hold a key. Holler it. It's typed.**
@@ -41,7 +43,7 @@ Free, offline, push-to-talk dictation for your desktop. Hold a key, speak, relea
 ## Features
 
 - **Works in every app.** Text is pasted at your cursor, so it works in editors, browsers, terminals, chat apps and anything else you can type into.
-- **Private and free.** Audio is processed on your machine and never leaves it. There is no account, no usage limit and no telemetry. The only network use is the one-time model download.
+- **Private and free.** Audio is processed on your machine and never leaves it. There is no account, no usage limit and no telemetry. The only network use is the one-time model download and a daily update check you can turn off.
 - **Understands self-corrections.** *"Meet at 3, no wait, 4 pm"* becomes *"Meet at 4 pm"*. *"Today is Monday, no no wait, Tuesday"* becomes *"Today is Tuesday"*. Fillers such as "um" and "uh" are dropped.
 - **Learns your words.** Add your jargon and names once, or fix a mistake and teach Holler with one chord. *"Mach"* becomes *"Moq"* from then on.
 - **Stays out of the way.** A small always-on-top pill shows a live waveform while you speak and a check mark when the text is in. Idle CPU is near zero, and the model's memory is freed after you stop dictating for a while.
@@ -51,7 +53,9 @@ Free, offline, push-to-talk dictation for your desktop. Hold a key, speak, relea
 
 ## Quick start
 
-On **Windows 10/11** with [Python 3.10 or newer](https://www.python.org/downloads/) (tick "Add python.exe to PATH" in the installer):
+**Easiest (Windows 10/11, from version 1.2.0):** download **`Holler-Setup-<version>.exe`** from the [latest release](https://github.com/MayankPunghal/holler/releases/latest) and run it. No Python needed. See [Windows installer](#windows-installer) for details.
+
+**With Python:** on **Windows 10/11** with [Python 3.10 or newer](https://www.python.org/downloads/) (tick "Add python.exe to PATH" in the installer):
 
 ```powershell
 py -m pip install holler
@@ -83,7 +87,21 @@ If you try Holler on Linux, please open an issue with what worked and what didn'
 
 ## Installation
 
-### From PyPI (recommended)
+### Windows installer
+
+Download **`Holler-Setup-<version>.exe`** from the [latest release](https://github.com/MayankPunghal/holler/releases/latest) and run it. Everything Holler needs is inside it, so you don't need Python.
+
+- It installs for your user account only, so there is no administrator prompt. The app goes in `%LOCALAPPDATA%\Programs\Holler`.
+- It adds **Holler** to the Start menu. You can also add a desktop shortcut and have Holler start when you sign in (on by default).
+- When it finishes, it opens Holler's setup wizard, which downloads your speech model once.
+- **"Windows protected your PC":** the installer isn't code-signed yet, so Windows SmartScreen warns about it. Click **More info**, then **Run anyway**. Every installer is built from this repository's source by GitHub Actions (see the `windows-app` workflow).
+- **Updates:** Holler checks for a new version once a day. When one is available, the tray menu shows *Update to Holler X.Y.Z*. Click it to download and run the new installer. You can also check from Settings > About > *Check now*. Your settings, vocabulary and models are kept.
+- **Uninstall:** Windows Settings > Apps > Holler > Uninstall. It asks whether to also delete your data folder (`%APPDATA%\Holler`). The default is to keep it.
+- **Command line:** the app folder also has `holler-cli.exe`, which accepts every command below, for example `holler-cli.exe doctor` or `holler-cli.exe selftest`.
+
+The pip install and the installed app share one data folder, so you can switch between them. Uninstall the one you don't use, so that only one of them starts with Windows.
+
+### From PyPI
 
 ```powershell
 py -m pip install holler
@@ -392,6 +410,7 @@ Weights of `small.en`, `base.en` and `small` are checked against pinned SHA-256 
 
 - Audio is processed locally and discarded after transcription. It is never saved or sent anywhere.
 - Holler makes no network requests except downloading a model (Hugging Face, the GitHub mirror, or a URL you configure). No telemetry, no accounts.
+- Once a day Holler asks GitHub whether a newer version exists (one request to `api.github.com`, nothing about you or your dictations is sent). Turn it off in Settings > General > *Check for updates* (`check_updates: false`).
 - A local history of your dictations is kept in `dictation_log.tsv` in the data folder so the History tab and learning work. Set `log: false` to stop it, or delete the file.
 - To type for you, Holler needs a global keyboard hook, which some antivirus tools flag. It only watches for your chord, and the source is in this repository.
 - Dictating into an app running as Administrator requires Holler to run as Administrator too (a Windows rule for all keyboard tools).
@@ -431,7 +450,7 @@ Run the tests (they use a fake keyboard, microphone and Whisper, so they need no
 
 ```powershell
 $env:PYTHONPATH="src"
-python tests/test_cleanup.py; python tests/test_vocab.py; python tests/test_app.py; python tests/test_models.py; python tests/test_bench.py; python tests/test_spoken.py; python tests/test_supervise.py
+python tests/test_cleanup.py; python tests/test_vocab.py; python tests/test_app.py; python tests/test_models.py; python tests/test_bench.py; python tests/test_spoken.py; python tests/test_supervise.py; python tests/test_updates.py
 ```
 
 CI runs them on Linux and Windows. Project layout:
@@ -446,12 +465,17 @@ src/holler/
   bench.py        holler bench                       doctor.py    holler doctor
   process.py      background run, autostart          tray.py      tray icon
   config.py       settings                           ui/          setup wizard and settings window
+  updates.py      daily update check                 brand.py     logo and installer images
+  selftest.py     holler selftest
+packaging/        Windows app build (PyInstaller spec, Inno Setup script)
 tests/            unit and pipeline tests            docs/        images
 ```
 
-Regenerate the pill images with `python -m holler.overlay --preview docs`.
+Regenerate the pill images with `python -m holler.overlay --preview docs`, and the logo, icon and installer images with `python -m holler.brand OUTDIR`.
 
-**Releasing** (maintainers): update `CHANGELOG.md` and the version in `pyproject.toml` and `src/holler/__init__.py`, then publish a GitHub release tagged `vX.Y.Z`. The `publish` workflow builds and uploads to PyPI using trusted publishing.
+**Windows app:** `pip install . pyinstaller`, then `pyinstaller packaging/holler.spec` builds `dist\Holler\` (`Holler.exe` with no console, `holler-cli.exe` with one). [Inno Setup 6](https://jrsoftware.org/isinfo.php) turns that into the installer: `iscc /DAppVersion=X.Y.Z packaging\installer.iss`. The `windows-app` workflow does both on every push. It runs `holler-cli.exe selftest --model tiny.en`, installs and uninstalls the result, keeps the installer as a build artifact, and attaches it to the GitHub release for a `v*` tag.
+
+**Releasing** (maintainers): update `CHANGELOG.md` and the version in `pyproject.toml` and `src/holler/__init__.py`, then publish a GitHub release tagged `vX.Y.Z`. The `publish` workflow builds and uploads to PyPI using trusted publishing. The `windows-app` workflow attaches `Holler-Setup-X.Y.Z.exe` to the release.
 
 ## Roadmap
 

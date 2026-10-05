@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 (unreleased)
+
+**Added**
+- Windows installer (`Holler-Setup-1.2.0.exe`, attached to each GitHub release). No Python needed. It installs per user with no admin prompt, adds a Start menu entry, and offers a desktop shortcut and start-with-Windows. Its uninstaller asks before deleting your data. Built and tested by GitHub Actions on every change.
+- A new logo, used for the tray icon, windows, the app and the installer.
+- Update check: once a day Holler asks GitHub whether a newer version exists. The tray menu and Settings > About offer to download and run the new installer (pip installs are shown the pip command). Turn it off with Settings > General > *Check for updates*.
+- `holler selftest [--model NAME]` checks that every part of the install loads.
+
+**Fixed**
+- Model downloads no longer flash a console window.
+
 ## 1.1.0
 
 **Changed**
