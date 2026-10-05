@@ -1,0 +1,76 @@
+name: windows-app
+# Builds the Windows installer (Holler-Setup-<version>.exe), tests it, and keeps it as a build artifact.
+# On a v* tag it is also attached to that version's GitHub release.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Holler and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[parakeet]" "pyinstaller>=6.10"
+
+      - name: Build the app
+        run: pyinstaller --noconfirm --clean packaging/holler.spec
+
+      - name: Test the app
+        shell: pwsh
+        run: |
+          $v = (& dist\Holler\holler-cli.exe --version)
+          Write-Host "version: $v"
+          & dist\Holler\holler-cli.exe selftest --model tiny.en
+          if ($LASTEXITCODE -ne 0) { throw "selftest failed" }
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          $iscc = (Get-Command iscc.exe -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          $ver = (Select-String -Path src\holler\__init__.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+          & $iscc "/DAppVersion=$ver" packaging\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "iscc failed" }
+          "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Test install and uninstall
+        shell: pwsh
+        run: |
+          $setup = "dist\Holler-Setup-$env:VERSION.exe"
+          Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/MERGETASKS=!autostart' -Wait
+          $app = "$env:LOCALAPPDATA\Programs\Holler"
+          if (-not (Test-Path "$app\Holler.exe")) { throw "Holler.exe was not installed" }
+          & "$app\holler-cli.exe" selftest --no-gui
+          if ($LASTEXITCODE -ne 0) { throw "installed selftest failed" }
+          Start-Process "$app\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES' -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path "$app\Holler.exe") { throw "uninstall left Holler.exe behind" }
+          Get-ChildItem dist\*.exe | ForEach-Object { "{0}  {1:N0} MB" -f $_.Name, ($_.Length / 1MB) }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Holler-Setup-${{ env.VERSION }}
+          path: dist/Holler-Setup-*.exe
+          retention-days: 30
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Holler-Setup-*.exe

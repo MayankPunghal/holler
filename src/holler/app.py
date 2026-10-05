@@ -472,4 +472,8 @@ class App:
         if self.tray:
             from .tray import start_tray
             self.tray = start_tray(self)
+        self.update = None
+        if self.tray and getattr(self.cfg, "check_updates", True):
+            from . import updates
+            updates.check_in_background(self.tray.update_found)
         self.overlay.run()      # blocks until the process is closed

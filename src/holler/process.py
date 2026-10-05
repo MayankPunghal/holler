@@ -108,6 +108,24 @@ def stop(timeout: float = 4.0) -> bool:
     return True
 
 
+def frozen() -> bool:
+    """True inside the Windows installer build (Holler.exe), where there is no `python -m holler`."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def app_dir() -> str:
+    return os.path.dirname(os.path.abspath(sys.executable))
+
+
+def holler_cmd(*args: str, console: bool = False) -> list:
+    """The command line that runs `holler <args>`: Holler.exe / holler-cli.exe in the installed app,
+    `python -m holler` (pythonw.exe when windowless) for a pip install."""
+    if frozen():
+        exe = os.path.join(app_dir(), "holler-cli.exe" if console else "Holler.exe")
+        return [exe, *args]
+    return [sys.executable if console else _windowless_python(), "-m", "holler", *args]
+
+
 def _windowless_python() -> str:
     exe = sys.executable
     if sys.platform == "win32":
@@ -119,7 +137,7 @@ def _windowless_python() -> str:
 
 def spawn(*args: str) -> subprocess.Popen:
     """Start `python -m holler <args>` detached from this process, without a console window."""
-    cmd = [_windowless_python(), "-m", "holler", *args]
+    cmd = holler_cmd(*args)
     kw = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
     if sys.platform == "win32":
         kw["creationflags"] = 0x00000008 | 0x08000000 | 0x00000200     # DETACHED | NO_WINDOW | NEW_GROUP
@@ -156,7 +174,7 @@ def supervise(cmd=None, max_crashes: int = 5, window: float = 120.0, delay: floa
         logf = open(path, "a", encoding="utf-8", errors="replace")
     except OSError:
         pass
-    cmd = cmd or [sys.executable, "-m", "holler", "run"]
+    cmd = cmd or holler_cmd("run", console=not frozen())
     env = dict(os.environ, HOLLER_SUPERVISED="1", PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8")
     crashes = []
     while True:
@@ -187,7 +205,8 @@ def supervise(cmd=None, max_crashes: int = 5, window: float = 120.0, delay: floa
 # ------------------------------------------------------------------ start with the computer
 
 def _autostart_command() -> str:
-    return f'"{_windowless_python()}" -m holler supervise'
+    return subprocess.list2cmdline(holler_cmd("supervise")) if sys.platform == "win32" else \
+        " ".join(f'"{a}"' if " " in a else a for a in holler_cmd("supervise"))
 
 
 def autostart_enabled() -> bool:
@@ -236,8 +255,8 @@ def _desktop_file():
 
 def create_start_menu_shortcut() -> bool:
     """Windows: a Start-menu entry "Holler" that opens its settings (or starts it). Returns True on success."""
-    if sys.platform != "win32":
-        return False
+    if sys.platform != "win32" or frozen():          # the installer makes its own Start-menu entry
+        return sys.platform == "win32"
     folder = os.path.join(os.environ.get("APPDATA", ""), "Microsoft", "Windows", "Start Menu", "Programs")
     link = os.path.join(folder, f"{APP_NAME}.lnk")
     ps = ("$s=(New-Object -ComObject WScript.Shell).CreateShortcut('%s');"

@@ -131,6 +131,7 @@ class GeneralPage(Page):
         app = self.card("App")
         sw(app, "overlay", "Show the status pill", "The small indicator while you speak and while it transcribes.")
         sw(app, "sound", "Beeps", "A short beep when recording starts and stops.")
+        sw(app, "check_updates", "Check for updates", "Once a day, asks GitHub if a newer Holler exists. Nothing else is sent.")
         sw(app, "log", "Keep a history on this computer", "Needed for the History page and for learning corrections.")
         self.auto = tk.BooleanVar(value=process.autostart_enabled())
         switch(app, "Start with the computer", "Holler starts in the background when you sign in.", self.auto)
@@ -539,11 +540,50 @@ class AboutPage(Page):
         setting(info, "Project page", "github.com/MayankPunghal/holler",
                 ttk.Button(info, text="Open", command=lambda: __import__("webbrowser").open(
                     "https://github.com/MayankPunghal/holler")))
+        upd = self.card("Updates")
+        self.upd_msg = tk.StringVar(value=f"You have {__version__}.")
+        setting(upd, "Holler version", None, ttk.Button(upd, text="Check now", command=self.check_updates))
+        ttk.Label(upd, textvariable=self.upd_msg, style="CardSub.TLabel", wraplength=560).grid(
+            row=upd._rows, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        upd._rows += 1
         files = self.card("Your files")
         setting(files, "Data folder", data_dir() + "\nSettings, vocabulary, history, logs and models.",
                 ttk.Button(files, text="Open folder", command=self.open))
         pid = process.running_pid()
         setting(files, "Status", f"Running (process {pid})" if pid else "Not running", None)
+
+    def check_updates(self):
+        from .. import updates
+        self.upd_msg.set("Checking...")
+        self.update_idletasks()
+        try:
+            rel = updates.check(force=True)
+        except Exception as e:
+            self.upd_msg.set(f"Couldn't reach GitHub ({type(e).__name__}). Check your internet connection.")
+            return
+        if not rel:
+            self.upd_msg.set(f"You have the latest version ({__version__}).")
+            return
+        if updates.can_self_install(rel):
+            self.upd_msg.set(f"Holler {rel['version']} is available. Downloading the installer...")
+            state = {"p": 0.0, "done": None}
+
+            def work():
+                state["done"] = updates.install(rel, progress=lambda f: state.update(p=f))
+
+            def poll():
+                if state["done"] is None:
+                    self.upd_msg.set(f"Holler {rel['version']} is available. Downloading the installer... "
+                                     f"{int(state['p'] * 100)}%")
+                    self.after(300, poll)
+                else:
+                    self.upd_msg.set("The installer has started: follow its steps." if state["done"] else
+                                     "Download failed; the release page is open in your browser.")
+            import threading
+            threading.Thread(target=work, daemon=True).start()
+            poll()
+        else:
+            self.upd_msg.set(f"Holler {rel['version']} is available. Close Holler and run:  {updates.pip_hint()}")
 
     def open(self):
         try:

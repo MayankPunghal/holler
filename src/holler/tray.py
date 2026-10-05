@@ -9,18 +9,8 @@ from .paths import data_dir, log_error
 
 
 def make_icon(paused: bool = False, size: int = 64) -> Image.Image:
-    s = 4
-    img = Image.new("RGBA", (size * s, size * s), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle([0, 0, size * s - 1, size * s - 1], radius=size * s // 4, fill=(24, 24, 27, 255))
-    col = (142, 142, 147, 255) if paused else (255, 69, 58, 255)
-    cx = size * s // 2
-    for i, h in enumerate((0.22, 0.42, 0.62, 0.42, 0.22)):          # five waveform bars
-        x = cx + (i - 2) * size * s // 7
-        half = int(size * s * h / 2)
-        d.rounded_rectangle([x - size * s // 22, size * s // 2 - half, x + size * s // 22, size * s // 2 + half],
-                            radius=size * s // 22, fill=col)
-    return img.resize((size, size), Image.LANCZOS)
+    from .brand import make_logo
+    return make_logo(size, paused)
 
 
 class Tray:
@@ -33,11 +23,35 @@ class Tray:
             M.SEPARATOR,
             I("Settings...", lambda: process.spawn("settings"), default=True),
             I("Pause dictation", self._toggle, checked=lambda _: app.paused),
+            I(lambda _: f"Update to Holler {app.update['version']}..." if getattr(app, "update", None) else "",
+              self._update, visible=lambda _: bool(getattr(app, "update", None))),
             I("Run setup wizard", lambda: process.spawn("setup")),
             I("Open data folder", self._open_folder),
             M.SEPARATOR,
             I("Quit", self._quit),
         ))
+
+    def _update(self):
+        from . import updates
+        rel = self.app.update
+        if not updates.can_self_install(rel):
+            self.notify(f"Holler {rel['version']} is out. Update with: {updates.pip_hint()}")
+        import threading
+        threading.Thread(target=updates.install, args=(rel,), daemon=True).start()
+
+    def notify(self, text):
+        try:
+            self.icon.notify(text, "Holler")
+        except Exception:
+            pass
+
+    def update_found(self, rel):
+        self.app.update = rel
+        try:
+            self.icon.update_menu()
+        except Exception:
+            pass
+        self.notify(f"Holler {rel['version']} is available. Right-click the tray icon to update.")
 
     def _toggle(self):
         self.app.paused = not self.app.paused

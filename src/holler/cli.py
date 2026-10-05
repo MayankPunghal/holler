@@ -49,6 +49,9 @@ def build_parser():
                  ("keys", "print the name of each key you press"),
                  ("where", "print the data folder")):
         sub.add_parser(n, help=h)
+    st = sub.add_parser("selftest", help="check that every part of this install loads")
+    st.add_argument("--model", default="", help="also download MODEL and run it once")
+    st.add_argument("--no-gui", action="store_true", help="skip the window checks")
     sub.add_parser("supervise", help="run in the background and restart automatically if it crashes")
     imp = sub.add_parser("import", help="merge keywords/replacements from a folder (older install) or a starter pack")
     imp.add_argument("folder", nargs="?", default=None)
@@ -258,6 +261,9 @@ def main(argv=None) -> int:
             print("\nShowing the pill now: look at the bottom of your screen (open another app first).")
             demo()
         return rc
+    elif cmd == "selftest":
+        from .selftest import run_selftest
+        return run_selftest(ns.model, gui=not ns.no_gui)
     elif cmd == "keys":
         cmd_keys()
     elif cmd == "where":

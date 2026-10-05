@@ -31,6 +31,7 @@ DEFAULTS = {
     "overlay": True,             # show the status pill
     "ui": "auto",                # auto | pill | classic
     "sound": True,               # start/stop beeps
+    "check_updates": True,       # once a day, ask GitHub whether a newer Holler exists (nothing else is sent)
     "extra_keywords": "",        # comma-separated, on top of the vocabulary list
     "setup_done": False,
 }

@@ -2,6 +2,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import urllib.request
@@ -117,7 +118,8 @@ def _curl_download(url, out, progress, cancel):
     if not curl:
         raise RuntimeError("curl not found")
     p = subprocess.Popen([curl, "-L", "--fail", "--silent", "--retry", "8", "--retry-delay", "3",
-                          "--retry-all-errors", "-C", "-", "-o", out, url])
+                          "--retry-all-errors", "-C", "-", "-o", out, url],
+                         creationflags=0x08000000 if sys.platform == "win32" else 0)   # no console window flash
     last = os.path.getsize(out) if os.path.exists(out) else 0
     while p.poll() is None:
         if cancel and cancel.is_set():
